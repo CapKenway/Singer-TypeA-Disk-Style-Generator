@@ -68,10 +68,10 @@ PRESETS: Dict[str, Dict[str, Any]] = {
         'id': 'scallop_center',
         'preset_number': '4C',
         'name': 'Scallop / Wave (Center Needle)',
-        'description': 'Center-anchored symmetrical sine wave oscillating across Center (6).',
+        'description': 'Center needle scallop: user commands Center to Right (0 to 12); machine automatically alternates to Left.',
         'category': 'Decorative (Center)',
         'needle_position': 'C',
-        'steps': [6, 8, 10, 12, 11, 8, 6, 4, 1, 0, 1, 4, 6, 8, 10, 12, 10, 8],
+        'steps': [0, 2, 6, 10, 12, 10, 6, 2, 0, 0, 2, 6, 10, 12, 10, 6, 2, 0],
     },
     'scallop_right': {
         'id': 'scallop_right',
@@ -110,9 +110,10 @@ PRESETS: Dict[str, Dict[str, Any]] = {
         'id': 'straight',
         'preset_number': '0',
         'name': 'Straight Stitch (Center)',
-        'description': 'Centered constant deflection disk for standard straight sewing.',
+        'description': 'Zero bight deflection disk for centered utility straight sewing.',
         'category': 'Basic Utility',
-        'steps': [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+        'needle_position': 'C',
+        'steps': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     },
 }
 

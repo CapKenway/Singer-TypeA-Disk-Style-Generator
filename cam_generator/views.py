@@ -132,13 +132,13 @@ def _extract_steps_and_options(request: HttpRequest) -> Tuple[List[float], float
     preset_num_raw = data.get('preset_number', '1').strip()
     clean_preset_num = re.sub(r'[^a-zA-Z0-9_\-# ]', '', preset_num_raw) or '1'
 
-    # Disc material thickness (default: 3.0 mm)
-    raw_thick = data.get('disc_thickness', '3.0')
+    # Machine setting (optimal stitch width / thickness setting on machine, 1.0 to 8.0)
+    raw_setting = data.get('machine_setting', data.get('disc_thickness', '3.0'))
     try:
-        disc_thickness = float(raw_thick)
-        disc_thickness = max(1.0, min(10.0, disc_thickness))
+        machine_setting = float(raw_setting)
+        machine_setting = max(1.0, min(8.0, machine_setting))
     except (ValueError, TypeError):
-        disc_thickness = 3.0
+        machine_setting = 3.0
     
     enable_etch = data.get('enable_etch', 'true').lower() in ('true', '1', 'yes', 'on')
     round_keyway = data.get('round_keyway', 'true').lower() in ('true', '1', 'yes', 'on')
@@ -148,7 +148,7 @@ def _extract_steps_and_options(request: HttpRequest) -> Tuple[List[float], float
         enable_etch, round_keyway, profile_mode, dwell_ratio,
         corner_fillet, name_rotation, cutter_radius,
         stitch_fill_mode, cut_depth, needle_pos,
-        clean_preset_num, disc_thickness
+        clean_preset_num, machine_setting
     )
 
 
@@ -172,7 +172,7 @@ def index_view(request: HttpRequest) -> HttpResponse:
     initial_cut_depth = 5.0
     initial_needle_pos = preset.get('needle_position', 'L')
     initial_preset_num = preset.get('preset_number', '1')
-    initial_thickness = 3.0
+    initial_setting = 3.0
     
     initial_svg = generate_cam_svg(
         initial_steps,
@@ -191,7 +191,7 @@ def index_view(request: HttpRequest) -> HttpResponse:
         round_keyway=True,
         needle_position=initial_needle_pos,
         preset_number=initial_preset_num,
-        disc_thickness=initial_thickness
+        machine_setting=initial_setting
     )
     metrics = get_cam_metrics(
         initial_steps,
@@ -203,7 +203,7 @@ def index_view(request: HttpRequest) -> HttpResponse:
         needle_position=initial_needle_pos,
         cut_depth=initial_cut_depth,
         preset_number=initial_preset_num,
-        disc_thickness=initial_thickness
+        machine_setting=initial_setting
     )
     
     stitch_controls = [
@@ -236,7 +236,8 @@ def index_view(request: HttpRequest) -> HttpResponse:
         'name_rotation': initial_rot,
         'needle_position': initial_needle_pos,
         'preset_number': initial_preset_num,
-        'disc_thickness': initial_thickness,
+        'machine_setting': initial_setting,
+        'disc_thickness': initial_setting,
     }
     return render(request, 'cam_generator/workbench.html', context)
 
@@ -253,7 +254,7 @@ def preview_cam_view(request: HttpRequest) -> HttpResponse:
         enable_etch, round_keyway, profile_mode, dwell_ratio,
         corner_fillet, name_rotation, cutter_radius,
         stitch_fill_mode, cut_depth, needle_position,
-        preset_number, disc_thickness
+        preset_number, machine_setting
     ) = _extract_steps_and_options(request)
     
     svg_fragment = generate_cam_svg(
@@ -273,7 +274,7 @@ def preview_cam_view(request: HttpRequest) -> HttpResponse:
         round_keyway=round_keyway,
         needle_position=needle_position,
         preset_number=preset_number,
-        disc_thickness=disc_thickness
+        machine_setting=machine_setting
     )
     return HttpResponse(svg_fragment, content_type="image/svg+xml")
 
@@ -293,7 +294,7 @@ def download_cam_view(request: HttpRequest) -> HttpResponse:
         enable_etch, round_keyway, profile_mode, dwell_ratio,
         corner_fillet, name_rotation, cutter_radius,
         stitch_fill_mode, cut_depth, needle_position,
-        preset_number, disc_thickness
+        preset_number, machine_setting
     ) = _extract_steps_and_options(request)
     
     clean_filename = re.sub(r'[^a-zA-Z0-9_\-]', '_', f"{maker_name}_{cam_name}") or 'singer_cam_42mm'
@@ -315,7 +316,7 @@ def download_cam_view(request: HttpRequest) -> HttpResponse:
             cam_label=cam_name,
             needle_position=needle_position,
             preset_number=preset_number,
-            disc_thickness=disc_thickness
+            machine_setting=machine_setting
         )
         response = HttpResponse(dxf_content, content_type="application/dxf")
         response['Content-Disposition'] = f'attachment; filename="{clean_filename}.dxf"'
@@ -339,7 +340,7 @@ def download_cam_view(request: HttpRequest) -> HttpResponse:
         round_keyway=round_keyway,
         needle_position=needle_position,
         preset_number=preset_number,
-        disc_thickness=disc_thickness
+        machine_setting=machine_setting
     )
     response = HttpResponse(svg_content, content_type="image/svg+xml")
     response['Content-Disposition'] = f'attachment; filename="{clean_filename}.svg"'

@@ -71,7 +71,8 @@ def generate_cam_svg(
     round_keyway: bool = True,
     needle_position: str = "L",
     preset_number: str = "1",
-    disc_thickness: float = 3.0
+    disc_thickness: Any = None,
+    machine_setting: float = 3.0
 ) -> str:
     """
     Generates an SVG representation of the Singer Type A cam.
@@ -80,13 +81,20 @@ def generate_cam_svg(
       - Dynamic stitch count (N = len(steps)).
       - Authentic OEM straight radial walls & subtractive rotary cutter milling.
       - Dual flanking face etching curved along concentric bore arcs.
-      - Top North header block with preset/cam number, needle gauge symbol, and thickness.
+      - Top North header block with preset/cam number, needle gauge symbol, and machine dial setting.
       - Clean South keyway strictly free of text or annotations.
       - 'unfilled' (open running wave) and 'filled' (solid satin stitch embroidery).
       - Configurable radial cut depth (bight swing amplitude).
     """
     total_stitches = max(MIN_STITCHES, min(MAX_STITCHES, len(steps)))
     sanitized_steps = sanitize_stitch_steps(steps, total_stitches)
+    
+    # Resolve machine setting (optimal dial 1.0 to 8.0)
+    resolved_setting = disc_thickness if disc_thickness is not None else machine_setting
+    try:
+        resolved_setting = max(1.0, min(8.0, float(resolved_setting)))
+    except (ValueError, TypeError):
+        resolved_setting = 3.0
     outer_poly = calculate_outer_perimeter(
         sanitized_steps,
         kerf_offset=kerf_offset,
@@ -118,7 +126,7 @@ def generate_cam_svg(
     top_block = calculate_top_header_block(
         preset_number=preset_number,
         needle_position=needle_position,
-        disc_thickness=disc_thickness
+        machine_setting=resolved_setting
     ) if enable_etch else None
 
     # Generate pure vector curve strokes for text (zero-font CNC / laser compatibility)
@@ -141,19 +149,19 @@ def generate_cam_svg(
     clean_pos = needle_position.strip().upper() if needle_position in ('L', 'C', 'R') else 'L'
 
     if enable_etch and left_block and right_block:
-        title_strokes = render_vector_text_arc(
+        title_pos = left_block.get('title_pos', (-12.4, -4.5))
+        subtitle_pos = left_block.get('subtitle_pos', (-12.4, 4.5))
+        title_strokes = render_vector_text_linear(
             text=cam_label,
-            radius=left_block.get('title_r', 13.8),
-            start_angle_deg=154.0,
-            end_angle_deg=206.0,
-            char_height=0.85
+            center_x=title_pos[0],
+            center_y=title_pos[1],
+            char_height=0.82
         )
-        subtitle_strokes = render_vector_text_arc(
+        subtitle_strokes = render_vector_text_linear(
             text=f"{total_stitches}-STITCH (NEEDLE {clean_pos})",
-            radius=left_block.get('subtitle_r', 10.6),
-            start_angle_deg=156.0,
-            end_angle_deg=204.0,
-            char_height=0.62
+            center_x=subtitle_pos[0],
+            center_y=subtitle_pos[1],
+            char_height=0.60
         )
         if abs(name_rotation) < 1.0:
             maker_strokes = render_vector_text_linear(
@@ -491,7 +499,8 @@ def generate_cam_dxf(
     cam_label: str = "PLAIN ZIG-ZAG",
     needle_position: str = "L",
     preset_number: str = "1",
-    disc_thickness: float = 3.0
+    disc_thickness: Any = None,
+    machine_setting: float = 3.0
 ) -> str:
     """
     Generates a compliant, production-grade AutoCAD R12 DXF file (pure Python).
@@ -504,6 +513,14 @@ def generate_cam_dxf(
     """
     total_stitches = max(MIN_STITCHES, min(MAX_STITCHES, len(steps)))
     sanitized_steps = sanitize_stitch_steps(steps, total_stitches)
+
+    # Resolve machine setting (optimal dial 1.0 to 8.0)
+    resolved_setting = disc_thickness if disc_thickness is not None else machine_setting
+    try:
+        resolved_setting = max(1.0, min(8.0, float(resolved_setting)))
+    except (ValueError, TypeError):
+        resolved_setting = 3.0
+
     outer_poly = calculate_outer_perimeter(
         sanitized_steps,
         kerf_offset=kerf_offset,
@@ -531,7 +548,7 @@ def generate_cam_dxf(
     top_block = calculate_top_header_block(
         preset_number=preset_number,
         needle_position=needle_position,
-        disc_thickness=disc_thickness
+        machine_setting=resolved_setting
     ) if enable_etch else None
 
     # Generate pure vector curve strokes for text in DXF (zero-font CNC / laser compatibility)
@@ -545,19 +562,19 @@ def generate_cam_dxf(
     clean_pos = needle_position.strip().upper() if needle_position in ('L', 'C', 'R') else 'L'
 
     if enable_etch and left_block and right_block:
-        title_strokes = render_vector_text_arc(
+        title_pos = left_block.get('title_pos', (-12.4, -4.5))
+        subtitle_pos = left_block.get('subtitle_pos', (-12.4, 4.5))
+        title_strokes = render_vector_text_linear(
             text=cam_label,
-            radius=left_block.get('title_r', 13.8),
-            start_angle_deg=154.0,
-            end_angle_deg=206.0,
-            char_height=0.85
+            center_x=title_pos[0],
+            center_y=title_pos[1],
+            char_height=0.82
         )
-        subtitle_strokes = render_vector_text_arc(
+        subtitle_strokes = render_vector_text_linear(
             text=f"{total_stitches}-STITCH (NEEDLE {clean_pos})",
-            radius=left_block.get('subtitle_r', 10.6),
-            start_angle_deg=156.0,
-            end_angle_deg=204.0,
-            char_height=0.62
+            center_x=subtitle_pos[0],
+            center_y=subtitle_pos[1],
+            char_height=0.60
         )
         if abs(name_rotation) < 1.0:
             maker_strokes = render_vector_text_linear(

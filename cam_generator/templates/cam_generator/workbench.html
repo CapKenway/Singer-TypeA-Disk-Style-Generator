@@ -543,23 +543,24 @@
                 />
               </div>
 
-              <!-- Disc Material Thickness Input Box -->
+              <!-- Optimal Machine Setting (Dial 1-8) -->
               <div class="sm:col-span-2">
-                <label for="disc_thickness" class="block text-[11px] font-medium text-slate-300 mb-1">
-                  Thickness: <span class="text-amber-400 font-mono text-[10px]">(mm)</span>
+                <label for="machine_setting" class="block text-[11px] font-medium text-slate-300 mb-1">
+                  Setting: <span class="text-amber-400 font-mono text-[10px]">(Opt 1-8)</span>
                 </label>
                 <input
                   type="number"
-                  id="disc_thickness"
-                  name="disc_thickness"
+                  id="machine_setting"
+                  name="machine_setting"
                   min="1.0"
-                  max="10.0"
+                  max="8.0"
                   step="0.5"
-                  value="{{ disc_thickness|default:'3.0' }}"
+                  value="{{ machine_setting|default:'3.0' }}"
                   class="w-full px-2 py-1 text-xs bg-slate-900/80 border border-slate-800/50 rounded text-amber-400 font-mono focus:border-sky-500 focus:outline-none font-bold text-center"
-                  oninput="const m = document.getElementById('metrics-thickness'); if(m) m.textContent = this.value + ' mm Acrylic'; triggerFormUpdate();"
-                  onchange="const m = document.getElementById('metrics-thickness'); if(m) m.textContent = this.value + ' mm Acrylic'; triggerFormUpdate();"
+                  oninput="const m = document.getElementById('metrics-thickness'); if(m) m.textContent = parseFloat(this.value).toFixed(1) + ' (Optimal)'; const d = document.getElementById('disc_thickness'); if(d) d.value = this.value; triggerFormUpdate();"
+                  onchange="const m = document.getElementById('metrics-thickness'); if(m) m.textContent = parseFloat(this.value).toFixed(1) + ' (Optimal)'; const d = document.getElementById('disc_thickness'); if(d) d.value = this.value; triggerFormUpdate();"
                 />
+                <input type="hidden" id="disc_thickness" name="disc_thickness" value="{{ machine_setting|default:'3.0' }}" />
               </div>
 
               <!-- Pattern Block Label (West Flank) -->
@@ -760,8 +761,8 @@
               <span class="text-sky-300 font-semibold" id="metrics-preset-num">{{ preset_number|default:"1" }}</span>
             </div>
             <div class="flex justify-between text-[11px]">
-              <span class="text-slate-500">Disc Thickness:</span>
-              <span class="text-amber-400 font-semibold" id="metrics-thickness">{{ disc_thickness|default:"3.0" }} mm Acrylic</span>
+              <span class="text-slate-500">Machine Setting:</span>
+              <span class="text-amber-400 font-semibold" id="metrics-thickness">{{ machine_setting|default:"3.0" }} (Optimal)</span>
             </div>
             <div class="flex justify-between text-[11px]">
               <span class="text-slate-500">Needle Position:</span>
@@ -820,12 +821,12 @@
 
       if (hint) {
         if (pos === 'L') hint.textContent = "Left-anchored (0) • Scallops bulge rightward";
-        else if (pos === 'C') hint.textContent = "Center-anchored (6) • Mirrored into filled diamonds";
+        else if (pos === 'C') hint.textContent = "Center-anchored (0) • Command Center-to-Right (0-12), machine auto-alternates to Left";
         else hint.textContent = "Right-anchored (12) • Inverted negative filling from top";
       }
 
       if (metricsPos) {
-        metricsPos.textContent = (pos === 'L' ? "Left (0.0mm)" : (pos === 'C' ? "Center (6.0mm)" : "Right (12.0mm)"));
+        metricsPos.textContent = (pos === 'L' ? "Left (0.0mm)" : (pos === 'C' ? "Center (0 - 12mm)" : "Right (12.0mm)"));
       }
 
       // Dynamic guide rail highlight on SVG canvas
@@ -836,29 +837,35 @@
       const guideR = document.getElementById('guide-rail-R');
       const textR = document.getElementById('guide-text-R');
 
+      if (textL) textL.textContent = (pos === 'C' ? "L (Auto)" : "L");
+      if (textC) textC.textContent = (pos === 'C' ? "C (0)" : "C");
+      if (textR) textR.textContent = (pos === 'C' ? "R (12)" : "R");
+
       if (guideL) {
-        guideL.setAttribute('stroke', pos === 'L' ? '#38bdf8' : '#334155');
-        guideL.setAttribute('stroke-width', pos === 'L' ? '1.8' : '1.0');
+        guideL.setAttribute('stroke', pos === 'L' ? '#38bdf8' : (pos === 'C' ? '#0284c7' : '#334155'));
+        guideL.setAttribute('stroke-width', pos === 'L' ? '1.8' : (pos === 'C' ? '1.2' : '1.0'));
+        guideL.setAttribute('stroke-dasharray', pos === 'C' ? '2 2' : '4 4');
       }
       if (textL) {
-        textL.setAttribute('fill', pos === 'L' ? '#38bdf8' : '#64748b');
-        textL.setAttribute('font-weight', pos === 'L' ? 'bold' : 'normal');
+        textL.setAttribute('fill', pos === 'L' ? '#38bdf8' : (pos === 'C' ? '#38bdf8' : '#64748b'));
+        textL.setAttribute('font-weight', (pos === 'L' || pos === 'C') ? 'bold' : 'normal');
       }
       if (guideC) {
         guideC.setAttribute('stroke', pos === 'C' ? '#38bdf8' : '#475569');
-        guideC.setAttribute('stroke-width', pos === 'C' ? '1.8' : '1.2');
+        guideC.setAttribute('stroke-width', pos === 'C' ? '2.0' : '1.2');
+        guideC.setAttribute('stroke-dasharray', pos === 'C' ? 'none' : '6 4');
       }
       if (textC) {
         textC.setAttribute('fill', pos === 'C' ? '#38bdf8' : '#64748b');
         textC.setAttribute('font-weight', pos === 'C' ? 'bold' : 'normal');
       }
       if (guideR) {
-        guideR.setAttribute('stroke', pos === 'R' ? '#38bdf8' : '#334155');
-        guideR.setAttribute('stroke-width', pos === 'R' ? '1.8' : '1.0');
+        guideR.setAttribute('stroke', pos === 'R' ? '#38bdf8' : (pos === 'C' ? '#0284c7' : '#334155'));
+        guideR.setAttribute('stroke-width', pos === 'R' ? '1.8' : (pos === 'C' ? '1.2' : '1.0'));
       }
       if (textR) {
-        textR.setAttribute('fill', pos === 'R' ? '#38bdf8' : '#64748b');
-        textR.setAttribute('font-weight', pos === 'R' ? 'bold' : 'normal');
+        textR.setAttribute('fill', (pos === 'R' || pos === 'C') ? '#38bdf8' : '#64748b');
+        textR.setAttribute('font-weight', (pos === 'R' || pos === 'C') ? 'bold' : 'normal');
       }
 
       if (shouldMorphPattern) {
@@ -870,7 +877,7 @@
         }
       }
 
-      renderWavePath();
+      rebuildCanvas();
       triggerFormUpdate();
     }
 
@@ -910,9 +917,10 @@
           const wave = Math.max(0, Math.sin(u));
           stitchValues[i] = Math.round(12.0 - (wave * 12.0));
         } else {
-          // Center: symmetrical sinusoidal wave oscillating across Center (6)
-          const wave = Math.sin(u);
-          stitchValues[i] = Math.round(6.0 + (wave * 6.0));
+          // Center needle: user commands Center (0) to Right (12)
+          // The machine automatically alternates to Left by the exact chosen amount.
+          const wave = Math.abs(Math.sin(u));
+          stitchValues[i] = Math.round(wave * 12.0);
         }
       }
       syncHiddenInputs();
@@ -966,10 +974,21 @@
     const Y_RANGE = Y_BOTTOM - Y_TOP; // 160px
 
     function bightToY(bight) {
+      if (currentNeedlePosition === 'C') {
+        const clamped = Math.max(0, Math.min(12, bight));
+        const Y_CENTER = (Y_TOP + Y_BOTTOM) / 2; // 110px
+        return Y_CENTER - ((clamped / 12.0) * (Y_CENTER - Y_TOP));
+      }
       return Y_BOTTOM - ((bight / 12.0) * Y_RANGE);
     }
 
     function yToBight(y) {
+      if (currentNeedlePosition === 'C') {
+        const Y_CENTER = (Y_TOP + Y_BOTTOM) / 2; // 110px
+        const clampedY = Math.max(Y_TOP, Math.min(Y_CENTER, y));
+        const fraction = (Y_CENTER - clampedY) / (Y_CENTER - Y_TOP);
+        return Math.round(fraction * 12.0);
+      }
       const clampedY = Math.max(Y_TOP, Math.min(Y_BOTTOM, y));
       const fraction = (Y_BOTTOM - clampedY) / Y_RANGE;
       return Math.round(fraction * 12.0);
@@ -1105,6 +1124,7 @@
       const nodeCircle = document.getElementById('node-circle-' + index);
       const nodeGlow = document.getElementById('node-glow-' + index);
       const nodeValText = document.getElementById('node-val-' + index);
+      const nodeGhost = document.getElementById('node-ghost-' + index);
 
       const y = bightToY(clamped);
       if (nodeCircle) nodeCircle.setAttribute('cy', y);
@@ -1112,6 +1132,12 @@
       if (nodeValText) {
         nodeValText.setAttribute('y', y - 9);
         nodeValText.textContent = clamped;
+      }
+      if (nodeGhost) {
+        const Y_CENTER = (Y_TOP + Y_BOTTOM) / 2;
+        const yGhost = Y_CENTER + ((clamped / 12.0) * (Y_BOTTOM - Y_CENTER));
+        nodeGhost.setAttribute('cy', yGhost);
+        nodeGhost.style.display = (currentNeedlePosition === 'C' && clamped > 0) ? 'block' : 'none';
       }
 
       renderWavePath();
@@ -1129,30 +1155,39 @@
       const Y_CENTER = (Y_TOP + Y_BOTTOM) / 2; // 110px
 
       if (currentNeedlePosition === 'C') {
-        // Mirrored from Center line: serrations become filled diamonds!
+        // Center Needle: user commands Center (0) to Right (12).
+        // The machine automatically alternates to Left by the exact chosen amount.
         let topPts = [];
         let botPts = [];
+        let zigPts = [];
         for (let i = 0; i < currentStitchCount; i++) {
           const x = getColumnX(i);
-          const y = bightToY(stitchValues[i]);
-          const delta = Math.abs(y - Y_CENTER);
-          topPts.push({ x: x, y: Y_CENTER - delta });
-          botPts.push({ x: x, y: Y_CENTER + delta });
+          const cmdVal = stitchValues[i];
+          const delta = (cmdVal / 12.0) * (Y_CENTER - Y_TOP); // 0 to 80px
+          const yRight = Y_CENTER - delta; // Commanded Right deflection
+          const yLeft = Y_CENTER + delta;  // Automatically alternated Left deflection
+          topPts.push({ x: x, y: yRight });
+          botPts.push({ x: x, y: yLeft });
+          // Needle alternates penetration between Left (even) and Right (odd)
+          const yZig = (i % 2 === 0) ? yLeft : yRight;
+          zigPts.push({ x: x, y: yZig });
         }
 
-        let dTop = `M ${topPts[0].x.toFixed(1)} ${topPts[0].y.toFixed(1)}`;
-        let dBot = `M ${botPts[0].x.toFixed(1)} ${botPts[0].y.toFixed(1)}`;
+        // Live alternating zigzag thread seam
+        let dZig = `M ${zigPts[0].x.toFixed(1)} ${zigPts[0].y.toFixed(1)}`;
         for (let i = 1; i < currentStitchCount; i++) {
-          dTop += ` L ${topPts[i].x.toFixed(1)} ${topPts[i].y.toFixed(1)}`;
-          dBot += ` L ${botPts[i].x.toFixed(1)} ${botPts[i].y.toFixed(1)}`;
+          dZig += ` L ${zigPts[i].x.toFixed(1)} ${zigPts[i].y.toFixed(1)}`;
         }
 
-        if (threadPath) threadPath.setAttribute('d', dTop + ' ' + dBot);
-        if (threadGlow) threadGlow.setAttribute('d', dTop + ' ' + dBot);
+        if (threadPath) threadPath.setAttribute('d', dZig);
+        if (threadGlow) threadGlow.setAttribute('d', dZig);
 
         if (waveAreaFill) {
-          // Closed diamond ribbon: forward along top contour, backward along bottom contour
-          let areaD = dTop;
+          // Closed satin ribbon: forward along top commanded contour, backward along bottom auto-alternated contour
+          let areaD = `M ${topPts[0].x.toFixed(1)} ${topPts[0].y.toFixed(1)}`;
+          for (let i = 1; i < currentStitchCount; i++) {
+            areaD += ` L ${topPts[i].x.toFixed(1)} ${topPts[i].y.toFixed(1)}`;
+          }
           for (let i = currentStitchCount - 1; i >= 0; i--) {
             areaD += ` L ${botPts[i].x.toFixed(1)} ${botPts[i].y.toFixed(1)}`;
           }
@@ -1161,28 +1196,25 @@
           waveAreaFill.setAttribute('fill-opacity', '0.45');
         }
 
-        // Dense satin thread passes mirrored symmetrically across center line
+        // Dense satin thread passes bridging across Center line from auto-Left to commanded-Right
         if (satinGroup) {
           let lines = '';
           const xStart = getColumnX(0);
           const xEnd = getColumnX(currentStitchCount - 1);
           const stepPx = 4.0;
           for (let px = xStart; px <= xEnd; px += stepPx) {
-            let yVal = Y_CENTER;
+            let valInterp = 0;
             for (let i = 0; i < currentStitchCount - 1; i++) {
               const x0 = getColumnX(i);
               const x1 = getColumnX(i + 1);
               if (px >= x0 && px <= x1) {
                 const u = (x1 > x0) ? (px - x0) / (x1 - x0) : 0;
-                const b0 = stitchValues[i];
-                const b1 = stitchValues[i + 1];
-                const bInterp = b0 + (u * (b1 - b0));
-                yVal = bightToY(bInterp);
+                valInterp = stitchValues[i] + (u * (stitchValues[i + 1] - stitchValues[i]));
                 break;
               }
             }
-            const delta = Math.abs(yVal - Y_CENTER);
-            if (delta > 1.5) {
+            const delta = (valInterp / 12.0) * (Y_CENTER - Y_TOP);
+            if (delta > 1.0) {
               const y1 = Y_CENTER - delta;
               const y2 = Y_CENTER + delta;
               lines += `<line x1="${px.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${px.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#38bdf8" stroke-width="2.5" stroke-opacity="0.85" />`;
@@ -1313,23 +1345,42 @@
           </g>
         `;
 
-        // Tactile Node
+        // Tactile Node & Center Needle Auto-Alternating Ghost Indicator
+        let ghostNodeMarkup = '';
+        if (currentNeedlePosition === 'C') {
+          const Y_CENTER = (Y_TOP + Y_BOTTOM) / 2;
+          const yGhost = Y_CENTER + ((bight / 12.0) * (Y_BOTTOM - Y_CENTER));
+          const isVisible = bight > 0;
+          ghostNodeMarkup = `<circle id="node-ghost-${i}" cx="${x}" cy="${yGhost}" r="4" fill="#0284c7" fill-opacity="0.4" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="2 2" pointer-events="none" style="display: ${isVisible ? 'block' : 'none'};" />`;
+        }
+
         nodesMarkup += `
           <g id="node-group-${i}" class="wave-node-group" data-index="${i}">
+            ${ghostNodeMarkup}
             <circle id="node-glow-${i}" cx="${x}" cy="${y}" r="10" fill="#38bdf8" fill-opacity="0.16" pointer-events="none" />
             <circle id="node-circle-${i}" class="wave-node-handle" cx="${x}" cy="${y}" r="5.5" fill="#030712" stroke="#38bdf8" stroke-width="2.0" />
             <text id="node-val-${i}" x="${x}" y="${y - 9}" fill="#38bdf8" font-size="9" font-family="ui-monospace, monospace" font-weight="bold" text-anchor="middle" pointer-events="none">${bight}</text>
           </g>
         `;
 
-        // Micro snap button
+        // Micro snap buttons adapted to active needle position
+        const snapRLabel = 'R';
+        const snapMLabel = (currentNeedlePosition === 'C') ? 'M' : 'C';
+        const snapLLabel = (currentNeedlePosition === 'C') ? 'C' : 'L';
+        const snapRVal = 12;
+        const snapMVal = 6;
+        const snapLVal = 0;
+        const snapRTitle = (currentNeedlePosition === 'C') ? 'Right 12 (Max)' : 'Right (12)';
+        const snapMTitle = (currentNeedlePosition === 'C') ? 'Mid-Right 6' : 'Center (6)';
+        const snapLTitle = (currentNeedlePosition === 'C') ? 'Center Baseline 0' : 'Left (0)';
+
         quickSnapsMarkup += `
           <div class="flex flex-col items-center bg-slate-950/60 p-0.5 rounded border border-slate-900/60 flex-1 min-w-[18px]">
             <span class="text-slate-500 text-[7px] mb-0.5">#${i+1}</span>
             <div class="flex flex-col gap-0.5 w-full">
-              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, 12);" title="Snap Right (12)">R</button>
-              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, 6);" title="Snap Center (6)">C</button>
-              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, 0);" title="Snap Left (0)">L</button>
+              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, ${snapRVal});" title="${snapRTitle}">${snapRLabel}</button>
+              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, ${snapMVal});" title="${snapMTitle}">${snapMLabel}</button>
+              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, ${snapLVal});" title="${snapLTitle}">${snapLLabel}</button>
             </div>
           </div>
         `;
@@ -1386,7 +1437,7 @@
           const tX = Math.max(10, Math.min(815, getColumnX(colIndex) - 37));
           const tY = Math.max(5, coords.y - 30);
           tooltip.setAttribute('transform', `translate(${tX}, ${tY})`);
-          tooltipText.textContent = `#${colIndex + 1}: ${bightVal}/12`;
+          tooltipText.textContent = (currentNeedlePosition === 'C') ? `#${colIndex + 1}: Right ${bightVal} (Auto Left)` : `#${colIndex + 1}: ${bightVal}/12`;
         }
       }
 

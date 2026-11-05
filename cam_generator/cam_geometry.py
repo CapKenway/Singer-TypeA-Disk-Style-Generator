@@ -43,7 +43,8 @@ SAMPLES_PER_WEDGE: int = 24        # Generates smooth polygon vertices
 FLANK_BLOCK_R_INNER: float = 10.0  # mm
 FLANK_BLOCK_R_OUTER: float = 14.5  # mm
 DEFAULT_CUTTER_RADIUS: float = 5.0 # mm (Rotary cutter / milling bit radius)
-DEFAULT_DISC_THICKNESS: float = 3.0 # mm (Standard cast acrylic thickness)
+DEFAULT_MACHINE_SETTING: float = 3.0 # Optimal machine dial / stitch thickness setting (1.0 to 8.0)
+DEFAULT_DISC_THICKNESS: float = 3.0 # Backward-compatible alias
 
 
 def calculate_subtractive_cutter_perimeter(
@@ -499,25 +500,39 @@ def calculate_left_flank_pattern_block(
     
     waveform_pts: List[Tuple[float, float]] = []
     node_pts: List[Tuple[float, float]] = []
+    centerline_pts: List[Tuple[float, float]] = []
     
     for i in range(total_stitches):
         val = sanitized_steps[i]
         u = float(i) / float(total_stitches - 1) if total_stitches > 1 else 0.5
         angle = math.radians(start_deg + (u * (end_deg - start_deg)))
+        cos_a = math.cos(angle)
+        sin_a = math.sin(angle)
+        
+        # Center datum line reference point
+        centerline_pts.append((round(r_midline * cos_a, 4), round(r_midline * sin_a, 4)))
         
         if clean_pos == 'C':
-            # Center needle: wave at mid, mirrored to crests
-            delta = (abs(val - 6.0) / 6.0) * half_span
-            r_val = r_midline + delta
+            # Center Needle: user commands Center to Right (0.0 = Center, 12.0 = Max Right).
+            # Machine automatically alternates to Left by the exact same chosen amount.
+            bight_frac = max(0.0, min(1.0, val / MAX_STEP_VALUE))
+            delta = bight_frac * half_span
+            r_right = r_midline + delta
+            r_left = r_midline - delta
+            
+            # The machine penetrates alternating between Left (even) and Right (odd)
+            r_stitch = r_left if (i % 2 == 0) else r_right
+            waveform_pts.append((round(r_stitch * cos_a, 4), round(r_stitch * sin_a, 4)))
+            # Command nodes are positioned on the commanded Right curve
+            node_pts.append((round(r_right * cos_a, 4), round(r_right * sin_a, 4)))
         elif clean_pos == 'R':
             r_val = r_inner_base + ((val / MAX_STEP_VALUE) * bight_radial_span)
+            waveform_pts.append((round(r_val * cos_a, 4), round(r_val * sin_a, 4)))
+            node_pts.append((round(r_val * cos_a, 4), round(r_val * sin_a, 4)))
         else:
             r_val = r_inner_base + ((val / MAX_STEP_VALUE) * bight_radial_span)
-
-        x = round(r_val * math.cos(angle), 4)
-        y = round(r_val * math.sin(angle), 4)
-        waveform_pts.append((x, y))
-        node_pts.append((x, y))
+            waveform_pts.append((round(r_val * cos_a, 4), round(r_val * sin_a, 4)))
+            node_pts.append((round(r_val * cos_a, 4), round(r_val * sin_a, 4)))
 
     # Dense Satin Stitch Hatching & Solid Ribbon Polygon for 'filled' mode
     satin_hatch_strokes: List[List[Tuple[float, float]]] = []
@@ -539,10 +554,12 @@ def calculate_left_flank_pattern_block(
         v_interp = sanitized_steps[i0] + (frac * (sanitized_steps[i1] - sanitized_steps[i0]))
         
         if clean_pos == 'C':
-            # Mirrored from center line: serrations become filled diamonds!
-            delta = (abs(v_interp - 6.0) / 6.0) * half_span
-            r_top = r_midline + delta
-            r_bot = r_midline - delta
+            # Center Needle: user commands Center to Right (0 to 12).
+            # Symmetrical satin ribbon: top contour at Right, bottom contour at auto Left
+            bight_frac = max(0.0, min(1.0, v_interp / MAX_STEP_VALUE))
+            delta = bight_frac * half_span
+            r_top = r_midline + delta  # Right commanded contour
+            r_bot = r_midline - delta  # Left automatically alternated contour
         elif clean_pos == 'R':
             # Negative to positive filling: top baseline filled down to wave, bottom empty
             r_bot = r_inner_base + ((v_interp / MAX_STEP_VALUE) * bight_radial_span)
@@ -589,6 +606,7 @@ def calculate_left_flank_pattern_block(
         'frame_polygon': frame_pts,
         'waveform_points': waveform_pts,
         'node_points': node_pts,
+        'centerline_points': centerline_pts,
         'satin_hatch_strokes': satin_hatch_strokes,
         'satin_ribbon_polygon': satin_ribbon_pts,
         'stitch_fill_mode': stitch_fill_mode,
@@ -702,7 +720,8 @@ def calculate_right_flank_maker_block(
 def calculate_top_header_block(
     preset_number: str = "1",
     needle_position: str = "L",
-    disc_thickness: float = 3.0
+    machine_setting: float = 3.0,
+    disc_thickness: Any = None
 ) -> Dict[str, Any]:
     """
     Generates geometry for the TOP HEADER BLOCK located on the NORTH sector (12 o'clock, Y < 0).
@@ -714,11 +733,17 @@ def calculate_top_header_block(
          - Horizontal needle gauge rail with end stops and tick marks for Left, Center, Right.
          - Downward-pointing sewing machine needle arrow and blade indicating active position.
          - L, C, R vector letter labels with active position highlight indicator box.
-      4. Lower Arc (R = 8.8mm): Needle Position & Thickness Etch (e.g. NEEDLE L • T:3.0MM).
+      4. Lower Arc (R = 8.8mm): Needle Position & Machine Setting Etch (e.g. NEEDLE L • SET:3.0).
+         Indicates the recommended machine dial setting for optimal stitch width/thickness.
     """
     clean_num = str(preset_number).strip().upper() or "1"
     clean_pos = needle_position.strip().upper() if needle_position in ('L', 'C', 'R') else 'L'
-    clean_thick = max(1.0, min(10.0, float(disc_thickness)))
+    
+    setting_val = disc_thickness if disc_thickness is not None else machine_setting
+    try:
+        clean_setting = max(1.0, min(8.0, float(setting_val)))
+    except (ValueError, TypeError):
+        clean_setting = 3.0
 
     # Frame polygon covering the top annular sector (North, Y < 0)
     frame_pts = _create_arc_band_polygon(
@@ -735,8 +760,8 @@ def calculate_top_header_block(
     else:
         preset_text = f"CAM #{clean_num}"
 
-    # Thickness and needle position summary string
-    specs_text = f"NEEDLE {clean_pos} • T:{clean_thick:.1f}MM"
+    # Machine dial setting & needle position summary string (e.g. NEEDLE C • SET:3.0)
+    specs_text = f"NEEDLE {clean_pos} • SET:{clean_setting:.1f}"
 
     # Multi-component pure vector strokes for the Needle Position Symbol
     needle_strokes: List[List[Tuple[float, float]]] = []
@@ -786,7 +811,8 @@ def calculate_top_header_block(
         'preset_text': preset_text,
         'preset_number': clean_num,
         'specs_text': specs_text,
-        'disc_thickness': clean_thick,
+        'machine_setting': clean_setting,
+        'disc_thickness': clean_setting,  # backward compatibility
         'needle_position': clean_pos,
         'preset_r': 13.5,
         'preset_start_deg': -120.0,
@@ -808,7 +834,8 @@ def get_cam_metrics(
     needle_position: str = 'L',
     cut_depth: float = 5.0,
     preset_number: str = "1",
-    disc_thickness: float = 3.0
+    disc_thickness: Any = None,
+    machine_setting: float = 3.0
 ) -> Dict[str, Any]:
     """
     Computes diagnostic and technical metrics for the cam design.
@@ -823,7 +850,13 @@ def get_cam_metrics(
     max_step = max(sanitized)
     
     clean_pos = needle_position.strip().upper() if needle_position in ('L', 'C', 'R') else 'L'
-    pos_label = "Left (0.0mm)" if clean_pos == 'L' else ("Center (6.0mm)" if clean_pos == 'C' else "Right (12.0mm)")
+    pos_label = "Left (0.0mm)" if clean_pos == 'L' else ("Center (Alternating)" if clean_pos == 'C' else "Right (12.0mm)")
+
+    setting_val = disc_thickness if disc_thickness is not None else machine_setting
+    try:
+        clean_setting = max(1.0, min(8.0, float(setting_val)))
+    except (ValueError, TypeError):
+        clean_setting = 3.0
 
     return {
         'stitch_count': total_stitches,
@@ -849,5 +882,6 @@ def get_cam_metrics(
         'needle_position': clean_pos,
         'needle_position_label': pos_label,
         'preset_number': str(preset_number),
-        'disc_thickness_mm': round(float(disc_thickness), 1),
+        'machine_setting': clean_setting,
+        'disc_thickness_mm': clean_setting,
     }

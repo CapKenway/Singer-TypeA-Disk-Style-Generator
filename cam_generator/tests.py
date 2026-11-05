@@ -604,12 +604,13 @@ class CamViewsTestCase(TestCase):
             self.assertIn('ETCH_DESIGN', dxf)
 
     def test_top_header_block_geometry(self):
-        """Verifies top header block calculation, preset number, needle symbol, and thickness."""
-        block = calculate_top_header_block(preset_number="38", needle_position="C", disc_thickness=3.0)
+        """Verifies top header block calculation, preset number, needle symbol, and optimal machine setting."""
+        block = calculate_top_header_block(preset_number="38", needle_position="C", machine_setting=3.0)
         self.assertEqual(block['preset_text'], "CAM #38")
         self.assertIn("NEEDLE C", block['specs_text'])
-        self.assertIn("T:3.0MM", block['specs_text'])
+        self.assertIn("SET:3.0", block['specs_text'])
         self.assertEqual(block['needle_position'], "C")
+        self.assertEqual(block['machine_setting'], 3.0)
 
         # Verify all frame polygon vertices are in the top sector (Y < 0)
         for x, y in block['frame_polygon']:
@@ -620,6 +621,33 @@ class CamViewsTestCase(TestCase):
         for stroke in block['needle_symbol_strokes']:
             for px, py in stroke:
                 self.assertLess(py, 0.0)
+
+    def test_center_needle_command_to_right_and_auto_left_alternation(self):
+        """
+        Verifies Center Needle mechanics:
+        - User commands Center-to-Right (0 to 12).
+        - Machine automatically alternates to Left by the chosen amount.
+        - Left flank disc etch generates alternating Left/Right waveform points and symmetric satin ribbon.
+        """
+        # User commands Center-to-Right: 0 (center), 6 (mid-right), 12 (max-right)
+        steps = [0.0, 12.0, 6.0, 12.0]
+        block = calculate_left_flank_pattern_block(steps, needle_position='C', cut_depth=5.0)
+
+        self.assertEqual(block['needle_position'], 'C')
+        self.assertEqual(block['stitch_fill_mode'], 'filled')
+        self.assertGreater(len(block['waveform_points']), 0)
+        self.assertGreater(len(block['centerline_points']), 0)
+
+        # Even stitches penetrate at Left (r < r_midline), Odd stitches penetrate at Right (r > r_midline)
+        # For step 1 (odd, val=12.0): penetrates on Right contour
+        # For step 0 (even, val=0.0): delta=0, on midline
+        r_mid = math.sqrt(block['centerline_points'][0][0]**2 + block['centerline_points'][0][1]**2)
+        r_odd = math.sqrt(block['waveform_points'][1][0]**2 + block['waveform_points'][1][1]**2)
+        self.assertGreater(r_odd, r_mid)
+
+        # Satin ribbon polygon bridges across Center line from auto-Left to commanded-Right
+        self.assertGreater(len(block['satin_ribbon_polygon']), 10)
+        self.assertGreater(len(block['satin_hatch_strokes']), 10)
 
     def test_clean_south_keyway_area(self):
         """Ensures nothing other than keyway cut lines are placed on or above the keyway slot."""
