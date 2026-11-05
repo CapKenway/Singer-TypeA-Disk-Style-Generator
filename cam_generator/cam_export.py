@@ -34,6 +34,7 @@ from .cam_geometry import (
     MAX_STITCHES,
     DEFAULT_KERF_OFFSET,
     DEFAULT_CUTTER_RADIUS,
+    PERIMETER_ROTATION_OFFSET,
 )
 from .cam_vector_font import (
     render_vector_text_arc,
@@ -310,7 +311,7 @@ def generate_cam_svg(
     stitch_badges = []
     
     for i in range(total_stitches):
-        angle = float(i) * rad_step
+        angle = PERIMETER_ROTATION_OFFSET + (float(i) * rad_step)
         cos_a = math.cos(angle)
         sin_a = math.sin(angle)
         

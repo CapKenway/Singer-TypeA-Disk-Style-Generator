@@ -202,9 +202,26 @@ class CamGeometryTestCase(TestCase):
         poly_no_kerf = calculate_outer_perimeter(steps, kerf_offset=0.0)
         poly_with_kerf = calculate_outer_perimeter(steps, kerf_offset=0.20)
         
-        x_no_kerf = poly_no_kerf[0][0]
-        x_with_kerf = poly_with_kerf[0][0]
-        self.assertAlmostEqual(x_with_kerf - x_no_kerf, 0.10, places=3)
+        r_no_kerf = math.sqrt(poly_no_kerf[0][0]**2 + poly_no_kerf[0][1]**2)
+        r_with_kerf = math.sqrt(poly_with_kerf[0][0]**2 + poly_with_kerf[0][1]**2)
+        self.assertAlmostEqual(r_with_kerf - r_no_kerf, 0.10, places=3)
+
+    def test_stitch_1_aligned_directly_under_keyway(self):
+        """
+        Verifies that the outer ring is rotated so Stitch 1 is centered
+        on the vertical centerline (x = 0.0, y > 0), directly below the keyway slot.
+        """
+        steps = [12.0] * 18
+        svg = generate_cam_svg(steps, is_preview=True)
+        # Stitch 1 badge / text number '1' must be centered at x = 0.00 directly under South keyway
+        self.assertIn('x="0.00" y="24.00"', svg)
+        self.assertIn('>1</text>', svg)
+        # Sector ray 1 should be a pure vertical line down the positive Y axis (x1 = 0.00, x2 = 0.00)
+        self.assertIn('x1="0.00" y1="15.20" x2="0.00" y2="22.20"', svg)
+        # Outer perimeter polygon begins at angle 90° (x = 0.0, y > 0)
+        poly = calculate_outer_perimeter(steps, kerf_offset=0.0)
+        self.assertAlmostEqual(poly[0][0], 0.0, places=2)
+        self.assertGreater(poly[0][1], 15.0)
 
 
 class CamExportTestCase(TestCase):

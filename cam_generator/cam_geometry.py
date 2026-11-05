@@ -46,6 +46,9 @@ DEFAULT_CUTTER_RADIUS: float = 5.0 # mm (Rotary cutter / milling bit radius)
 DEFAULT_MACHINE_SETTING: float = 3.0 # Optimal machine dial / stitch thickness setting (1.0 to 8.0)
 DEFAULT_DISC_THICKNESS: float = 3.0 # Backward-compatible alias
 
+# Spindle Keyway Alignment: 90° (South, pi/2 radians) aligns Stitch 1 right in the center directly under the keyhole slot
+PERIMETER_ROTATION_OFFSET: float = math.pi / 2.0  # 90 degrees (South / positive Y)
+
 
 def calculate_subtractive_cutter_perimeter(
     steps: List[float],
@@ -54,7 +57,8 @@ def calculate_subtractive_cutter_perimeter(
     base_radius: float = BASE_TRACK_RADIUS,  # 16.0 mm (32mm Min Track)
     cutter_radius: float = DEFAULT_CUTTER_RADIUS,  # 5.0 mm bit radius
     cut_depth: float = 5.0,                  # Radial cut depth travel (1.0 to 5.0 mm)
-    samples_per_wedge: int = SAMPLES_PER_WEDGE
+    samples_per_wedge: int = SAMPLES_PER_WEDGE,
+    angle_offset: float = PERIMETER_ROTATION_OFFSET
 ) -> List[Tuple[float, float]]:
     """
     Subtractive Rotary Cutter / Grinding Bit Cam Geometry.
@@ -82,7 +86,7 @@ def calculate_subtractive_cutter_perimeter(
     cutters: List[Tuple[float, float]] = []  # (center_dist, angle_rad)
     for i in range(total_stitches):
         val_curr = sanitized_steps[i]
-        angle_curr = float(i) * rad_step
+        angle_curr = angle_offset + (float(i) * rad_step)
         
         if val_curr < 11.99:  # Pocket cutout required
             depth = ((12.0 - val_curr) / 12.0) * max_depth
@@ -105,7 +109,7 @@ def calculate_subtractive_cutter_perimeter(
     total_samples = total_stitches * samples_per_wedge
     
     for s in range(total_samples):
-        theta = (float(s) / float(total_samples)) * (2.0 * math.pi)
+        theta = angle_offset + ((float(s) / float(total_samples)) * (2.0 * math.pi))
         r = max_radius
         
         # Test against all active rotary cutters
@@ -185,7 +189,8 @@ def calculate_outer_perimeter(
     corner_fillet: float = 0.50,
     cutter_radius: float = DEFAULT_CUTTER_RADIUS,
     cut_depth: float = 5.0,
-    samples_per_wedge: int = SAMPLES_PER_WEDGE
+    samples_per_wedge: int = SAMPLES_PER_WEDGE,
+    angle_offset: float = PERIMETER_ROTATION_OFFSET
 ) -> List[Tuple[float, float]]:
     """
     Generates a closed polygon for the outer cam perimeter (42.0mm OD max, 32.0mm min track).
@@ -215,6 +220,8 @@ def calculate_outer_perimeter(
       - cutter_radius: Radius of rotary cutter bit (mm) for 'subtractive' mode.
       - cut_depth: Radial cut depth / bight travel window (1.0 to 5.0 mm).
       - kerf_offset: Laser beam kerf expansion (mm).
+      - angle_offset: Radial rotation offset (radians). Default PERIMETER_ROTATION_OFFSET (pi/2)
+        aligns Stitch 1 right in the center directly under the spindle keyhole.
     """
     if profile_mode in ('subtractive', 'cutter'):
         return calculate_subtractive_cutter_perimeter(
@@ -224,7 +231,8 @@ def calculate_outer_perimeter(
             base_radius=BASE_TRACK_RADIUS,
             cutter_radius=cutter_radius,
             cut_depth=cut_depth,
-            samples_per_wedge=samples_per_wedge
+            samples_per_wedge=samples_per_wedge,
+            angle_offset=angle_offset
         )
 
     total_stitches = max(MIN_STITCHES, len(steps))
@@ -244,9 +252,9 @@ def calculate_outer_perimeter(
     for i in range(total_stitches):
         r_current = radii[i]
         r_next = radii[(i + 1) % total_stitches]
-        angle_start = float(i) * rad_step
-        angle_end = float(i + 1) * rad_step
-        angle_mid = (float(i) + 0.5) * rad_step
+        angle_start = angle_offset + (float(i) * rad_step)
+        angle_end = angle_offset + (float(i + 1) * rad_step)
+        angle_mid = angle_offset + ((float(i) + 0.5) * rad_step)
         
         # 4-point neighborhood for spline mode
         p0 = radii[(i - 1) % total_stitches]
@@ -355,7 +363,7 @@ def calculate_outer_perimeter(
                 
             r_nominal = max(BASE_TRACK_RADIUS - 0.5, min(OUTER_MAX_RADIUS, r_nominal))
             r_cut = r_nominal + half_kerf
-            angle = (float(i) + t) * rad_step
+            angle = angle_start + (t * rad_step)
             
             x = r_cut * math.cos(angle)
             y = r_cut * math.sin(angle)
