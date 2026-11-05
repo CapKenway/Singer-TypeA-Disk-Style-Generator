@@ -1,0 +1,70 @@
+{% for stitch in stitch_controls %}
+<!-- Vertical Needle Bight Lever #{{ stitch.number }} -->
+<div class="lever-column flex flex-col items-center bg-slate-900/90 border border-slate-800 hover:border-sky-500/50 rounded-xl p-2 transition-all group min-w-[54px] flex-1">
+  
+  <!-- Stitch Header (Index & Angle) -->
+  <div class="text-center mb-1.5 w-full">
+    <div class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-950 border border-slate-800 text-sky-400 font-mono text-[10px] font-bold group-hover:border-sky-400">
+      {{ stitch.number }}
+    </div>
+    <div class="text-[9px] text-slate-500 font-mono mt-0.5">{{ stitch.angle }}°</div>
+  </div>
+
+  <!-- Needle Deflection Value Badge -->
+  <div class="mb-1 text-center font-mono">
+    <span class="inline-block px-1.5 py-0.5 rounded text-[11px] font-bold bg-slate-950 text-sky-300 border border-slate-800/80" id="badge-val-{{ stitch.index }}">
+      {{ stitch.value|floatformat:0 }}
+    </span>
+  </div>
+
+  <!-- Needle Position Guide Marks (Right: 12, Center: 6, Left: 0) -->
+  <div class="relative flex items-center justify-center h-48 py-2 w-full">
+    <!-- Vertical guide rail -->
+    <div class="absolute inset-y-2 w-1 bg-slate-800 rounded-full"></div>
+    
+    <!-- Reference Tick Marks -->
+    <div class="absolute top-2 right-1 text-[8px] font-mono text-slate-600 select-none" title="Right needle bight (12)">R</div>
+    <div class="absolute top-1/2 -translate-y-1/2 right-1 text-[8px] font-mono text-slate-600 select-none" title="Center needle bight (6)">C</div>
+    <div class="absolute bottom-2 right-1 text-[8px] font-mono text-slate-600 select-none" title="Left needle bight (0)">L</div>
+
+    <!-- Vertical Slider Input -->
+    <input
+      type="range"
+      id="step_{{ stitch.index }}"
+      name="step_{{ stitch.index }}"
+      min="0"
+      max="12"
+      step="1"
+      value="{{ stitch.value }}"
+      orient="vertical"
+      class="cam-vertical-slider h-44 w-6 appearance-none bg-transparent cursor-pointer relative z-10 focus:outline-none"
+      oninput="updateStitchLever({{ stitch.index }}, this.value);"
+    />
+  </div>
+
+  <!-- Quick Bight Snap Buttons (L / C / R) -->
+  <div class="grid grid-cols-3 gap-0.5 w-full mt-2 pt-1 border-t border-slate-800/80 text-[9px] font-mono">
+    <button
+      type="button"
+      class="py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-sky-300 text-center transition"
+      title="Snap to Left (0)"
+      onclick="setStitchBight({{ stitch.index }}, 0);">
+      L
+    </button>
+    <button
+      type="button"
+      class="py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-sky-300 text-center transition"
+      title="Snap to Center (6)"
+      onclick="setStitchBight({{ stitch.index }}, 6);">
+      C
+    </button>
+    <button
+      type="button"
+      class="py-0.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-sky-300 text-center transition"
+      title="Snap to Right (12)"
+      onclick="setStitchBight({{ stitch.index }}, 12);">
+      R
+    </button>
+  </div>
+</div>
+{% endfor %}

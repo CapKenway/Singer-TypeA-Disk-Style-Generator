@@ -1,0 +1,25 @@
+# Django specific configuration
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Active environment configurations containing live tokens/keys
+.env
+.env.*
+.secrets
+vercel.json.local
+
+# Python runtime targets
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# The DB
+*.sqlite3
+*.sqlite3-journal

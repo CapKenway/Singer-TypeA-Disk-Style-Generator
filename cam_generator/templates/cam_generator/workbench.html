@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Singer Type A Cam Generator | 42mm Mechanical CAD/CAM Designer</title>
+  <meta name="description" content="Intuitive CAD/CAM designer for vintage Singer Type A sewing machine stitch cams. Subtractive rotary cutter math, dynamic stitch count, mechanical gear-tooth dwell flats, right-angle sawteeth, dual flanking face etching, and directly editable stitch wave.">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              900: '#0c4a6e',
+              950: '#082f49',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- HTMX via CDN -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  <style>
+    /* Blueprint subtle background */
+    .blueprint-bg {
+      background-color: #030712;
+      background-image: radial-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 0);
+      background-size: 24px 24px;
+    }
+    /* Guaranteed side-by-side 2-column layout */
+    .workbench-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr);
+      gap: 1.25rem;
+      align-items: start;
+      width: 100%;
+    }
+    @media (max-width: 920px) {
+      .workbench-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    /* Minimal custom range sliders */
+    input[type=range].cam-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 15px;
+      width: 15px;
+      border-radius: 9999px;
+      background: #38bdf8;
+      border: 2px solid #030712;
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+    }
+    /* Interactive wave canvas styles */
+    .wave-node-handle {
+      transition: r 0.12s ease, filter 0.12s ease;
+      cursor: ns-resize;
+    }
+    .wave-node-handle:hover {
+      r: 8.5;
+      filter: drop-shadow(0 0 8px #38bdf8);
+    }
+    .wave-column-track {
+      cursor: pointer;
+    }
+    .wave-column-track:hover .column-guide {
+      stroke: #38bdf8;
+      stroke-opacity: 0.6;
+    }
+  </style>
+</head>
+
+<body class="blueprint-bg text-slate-100 min-h-screen font-sans antialiased selection:bg-sky-500 selection:text-white"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+  <!-- Top Minimal Header -->
+  <header class="border-b border-slate-800/40 bg-slate-950/80 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-[1480px] mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <!-- Vintage Cam Icon -->
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 p-0.5 flex items-center justify-center shadow-md shadow-sky-500/10">
+          <div class="w-full h-full bg-slate-950 rounded-[7px] flex items-center justify-center">
+            <svg class="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="3.5" />
+              <path d="M10.5 8.5 A 1.5 1.5 0 0 1 13.5 8.5 V 10 H 10.5 Z" fill="currentColor" opacity="0.8" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+              Singer Type A <span class="text-sky-400 font-mono">Mechanical Cam Designer</span>
+            </h1>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-950/80 text-sky-300 border border-sky-800/40 font-mono">
+              42mm OD • 14mm Bore • Anti-Crack Key
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400">Subtractive Rotary Cutter Milling, Dwell Flats, Right-Angle Sawteeth &amp; Curved Bore Etching</p>
+        </div>
+      </div>
+
+      <!-- Quick Specs Badges -->
+      <div class="hidden sm:flex items-center space-x-2 text-[11px] font-mono">
+        <div class="px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800/40 text-slate-300">
+          <span class="text-slate-500">OD:</span> 42mm
+        </div>
+        <div class="px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800/40 text-slate-300">
+          <span class="text-slate-500">Min:</span> 32mm
+        </div>
+        <div class="px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800/40 text-slate-300">
+          <span class="text-slate-500">Bore:</span> 14mm
+        </div>
+        <div class="px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-800/40 text-emerald-300">
+          Rotary Cutter &amp; Dwell
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Workspace (Minimal Border, Flush Side-by-Side 2 Columns) -->
+  <main class="max-w-[1480px] mx-auto px-3 sm:px-5 py-3">
+    
+    <!-- Presets Quick Bar (Minimal Border) -->
+    <section class="mb-3 bg-slate-900/30 border border-slate-800/30 rounded-xl p-2.5 backdrop-blur-sm">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center space-x-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-300">Standard Historic Singer Presets</h2>
+        </div>
+        <span class="text-[10px] text-slate-500">Click any preset to load both the wave and physical cam profile</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
+        {% for p_key, preset in presets.items %}
+        <button
+          type="button"
+          class="preset-btn px-2 py-1 text-left rounded-lg bg-slate-950/60 border border-slate-800/30 hover:border-sky-500/50 hover:bg-slate-800/40 transition group focus:outline-none"
+          onclick="applyPreset({{ preset.steps|safe }}, '{{ preset.id }}', '{{ preset.name|escapejs }}', '{{ preset.needle_position|default:"L" }}', '{{ preset.preset_number|default:"1" }}')">
+          <div class="text-[11px] font-semibold text-slate-200 group-hover:text-sky-300 truncate">
+            {{ preset.name }}
+          </div>
+          <div class="text-[9px] text-slate-500 truncate">
+            {{ preset.category }}
+          </div>
+        </button>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Master Form with HTMX Integration -->
+    <form id="cam-form"
+          method="POST"
+          action="{% url 'download_cam_view' %}"
+          hx-post="{% url 'preview_cam_view' %}"
+          hx-trigger="change, input delay:50ms"
+          hx-target="#cam-preview-container"
+          hx-swap="innerHTML"
+          class="w-full">
+      {% csrf_token %}
+
+      <!-- Hidden Input for Dynamic Stitch Count, Fill Mode, Cut Depth & Needle Position (Strictly Outside Grid Container) -->
+      <input type="hidden" id="stitch_count" name="stitch_count" value="{{ stitch_count }}" />
+      <input type="hidden" id="stitch_fill_mode" name="stitch_fill_mode" value="{{ stitch_fill_mode }}" />
+      <input type="hidden" id="cut_depth" name="cut_depth" value="{{ cut_depth }}" />
+      <input type="hidden" id="needle_position" name="needle_position" value="{{ needle_position|default:'L' }}" />
+
+      <!-- Hidden Inputs for Dynamic Needle Steps (Strictly Outside Grid Container) -->
+      <div id="hidden-inputs-container" style="display: none !important;">
+        {% for stitch in stitch_controls %}
+        <input type="hidden" id="step_{{ stitch.index }}" name="step_{{ stitch.index }}" value="{{ stitch.value|floatformat:0 }}" />
+        {% endfor %}
+      </div>
+
+      <!-- TRUE SIDE-BY-SIDE 2-COLUMN GRID (Strictly 2 Children) -->
+      <div class="workbench-layout">
+
+        <!-- CHILD 1: LEFT COLUMN (Interactive Wave Canvas, Profile Controls, Flanking Etch & Kerf) -->
+        <div class="min-w-0 space-y-3">
+
+          <!-- DIRECTLY EDITABLE & INTERACTIVE STITCH WAVEFORM STUDIO (Minimal Border) -->
+          <div class="bg-slate-900/40 border border-slate-800/30 rounded-xl p-3.5 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Interactive Stitch Waveform Canvas
+                </h2>
+                <p class="text-[11px] text-slate-400">
+                  <strong class="text-sky-400 font-normal">Drag nodes</strong> or <strong class="text-sky-400 font-normal">click-and-drag across the canvas</strong> to shape your seam thread directly.
+                </p>
+              </div>
+
+              <!-- DYNAMIC STITCH COUNT CONTROLLER -->
+              <div class="flex items-center space-x-1.5 bg-slate-950/70 px-2 py-1 rounded-lg border border-slate-800/30 text-xs">
+                <span class="text-slate-400 font-medium text-[11px]">Points:</span>
+                <button type="button" onclick="changeStitchCount(-1)" class="w-5 h-5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold flex items-center justify-center transition">−</button>
+                <span id="stitch-count-badge" class="font-mono text-sky-400 font-bold px-1 text-xs">{{ stitch_count }}</span>
+                <button type="button" onclick="changeStitchCount(1)" class="w-5 h-5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold flex items-center justify-center transition">+</button>
+                
+                <!-- Quick Preset Counts -->
+                <div class="hidden sm:flex items-center space-x-1 pl-1 border-l border-slate-800/50 font-mono text-[10px]">
+                  <button type="button" onclick="setExactStitchCount(12)" class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300">12</button>
+                  <button type="button" onclick="setExactStitchCount(16)" class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300">16</button>
+                  <button type="button" onclick="setExactStitchCount(18)" class="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800/50">18</button>
+                  <button type="button" onclick="setExactStitchCount(24)" class="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300">24</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Waveform Quick Manipulation Tools Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-1.5 mb-2 pb-1.5 border-b border-slate-800/30 text-xs">
+              <div class="flex flex-wrap items-center gap-1">
+                <button type="button" onclick="setScallopForPosition()" class="px-2 py-0.5 rounded bg-sky-950/70 hover:bg-sky-900/80 border border-sky-500/50 text-sky-300 font-mono text-[10px] transition font-semibold" title="Generate Scallop wave aligned to active needle position (L, C, or R)">Scallop Wave</button>
+                <button type="button" onclick="setCompoundBanner()" class="px-2 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900/80 border border-amber-800/40 text-amber-300 font-mono text-[10px] transition" title="Compound pattern: Straight line stem + solid satin block">Compound (Line + Satin Block)</button>
+                <button type="button" onclick="setSquareBlocks()" class="px-2 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-800/40 text-emerald-300 font-mono text-[10px] transition" title="Disc #38 / 276338: Alternating 2-stitch square dwell blocks">Disc #38 Blocks (2-Step)</button>
+                <button type="button" onclick="setSquareTeeth()" class="px-2 py-0.5 rounded bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/40 text-slate-300 font-mono text-[10px] transition" title="Alternating 1-stitch square teeth (12/0)">Stepped Teeth (1-Step)</button>
+                <button type="button" onclick="setSawtooth()" class="px-2 py-0.5 rounded bg-slate-800/50 hover:bg-slate-700/60 text-slate-300 font-mono text-[10px] transition" title="Right-angle sawtooth ramp pattern">Sawtooth Ramp</button>
+                <button type="button" onclick="invertPattern()" class="px-2 py-0.5 rounded bg-slate-800/50 hover:bg-slate-700/60 text-slate-300 font-mono text-[10px] transition">Invert</button>
+                <button type="button" onclick="mirrorPattern()" class="px-2 py-0.5 rounded bg-slate-800/50 hover:bg-slate-700/60 text-slate-300 font-mono text-[10px] transition">Mirror</button>
+                <button type="button" onclick="resetPattern(0)" class="px-2 py-0.5 rounded bg-slate-800/50 hover:bg-slate-700/60 text-slate-300 font-mono text-[10px] transition">All Left (0)</button>
+                <button type="button" onclick="resetPattern(6)" class="px-2 py-0.5 rounded bg-slate-800/50 hover:bg-slate-700/60 text-slate-300 font-mono text-[10px] transition">Center (6)</button>
+                <button type="button" onclick="resetPattern(12)" class="px-2 py-0.5 rounded bg-slate-800/50 hover:bg-slate-700/60 text-slate-300 font-mono text-[10px] transition">All Right (12)</button>
+              </div>
+              <div class="text-[10px] font-mono text-slate-500">
+                <span class="text-sky-400">Right: 12</span> • <span>Center: 6</span> • <span class="text-slate-400">Left: 0</span>
+              </div>
+            </div>
+
+            <!-- Dual Control Bar: 3 Needle Positions (L - C - R) & Seam Density Style -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-2 p-2 bg-slate-950/70 rounded-lg border border-slate-800/40 text-xs items-center">
+              <!-- 3 Needle Positions (Vintage Singer L • C • R Lever) -->
+              <div class="sm:col-span-7 flex flex-wrap items-center gap-2">
+                <span class="text-slate-400 font-medium text-[11px] flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                  Needle Position:
+                </span>
+                <div class="inline-flex rounded-md shadow-sm" role="group">
+                  <button type="button"
+                          id="btn-pos-left"
+                          onclick="setNeedlePosition('L')"
+                          class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-l-md border transition {% if needle_position == 'L' %}bg-sky-950 text-sky-300 border-sky-500 shadow-sm shadow-sky-500/20{% else %}bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200{% endif %}"
+                          title="Left Needle Position (Baseline at 0, scallops bulge rightward)">
+                    L (Left)
+                  </button>
+                  <button type="button"
+                          id="btn-pos-center"
+                          onclick="setNeedlePosition('C')"
+                          class="px-2.5 py-0.5 text-[10px] font-mono font-bold border-t border-b border-r transition {% if needle_position == 'C' %}bg-sky-950 text-sky-300 border-sky-500 shadow-sm shadow-sky-500/20{% else %}bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200{% endif %}"
+                          title="Center Needle Position (Baseline at 6, symmetrical wave)">
+                    C (Center)
+                  </button>
+                  <button type="button"
+                          id="btn-pos-right"
+                          onclick="setNeedlePosition('R')"
+                          class="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-r-md border transition {% if needle_position == 'R' %}bg-sky-950 text-sky-300 border-sky-500 shadow-sm shadow-sky-500/20{% else %}bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200{% endif %}"
+                          title="Right Needle Position (Baseline at 12, scallops bulge leftward)">
+                    R (Right)
+                  </button>
+                </div>
+                <span class="text-[9.5px] text-slate-500 font-mono hidden md:inline" id="needle-pos-hint">
+                  {% if needle_position == 'C' %}Center-anchored (6) • Symmetrical wave{% elif needle_position == 'R' %}Right-anchored (12) • Scallops bulge leftward{% else %}Left-anchored (0) • Scallops bulge rightward{% endif %}
+                </span>
+              </div>
+
+              <!-- Seam Density Style: Unfilled (Open Line) vs Filled (Solid Satin Stitch) -->
+              <div class="sm:col-span-5 flex items-center justify-start sm:justify-end gap-2">
+                <span class="text-slate-400 font-medium text-[11px] flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                  </svg>
+                  Seam:
+                </span>
+                <div class="inline-flex rounded-md shadow-sm" role="group">
+                  <button type="button"
+                          id="btn-mode-unfilled"
+                          onclick="setStitchFillMode('unfilled')"
+                          class="px-2.5 py-0.5 text-[10px] font-mono font-medium rounded-l-md border transition {% if stitch_fill_mode == 'unfilled' %}bg-sky-950 text-sky-300 border-sky-600{% else %}bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200{% endif %}">
+                    Unfilled
+                  </button>
+                  <button type="button"
+                          id="btn-mode-filled"
+                          onclick="setStitchFillMode('filled')"
+                          class="px-2.5 py-0.5 text-[10px] font-mono font-medium rounded-r-md border transition {% if stitch_fill_mode == 'filled' %}bg-emerald-950 text-emerald-300 border-emerald-600{% else %}bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200{% endif %}">
+                    Filled (Satin)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- THE EDITABLE WAVEFORM CANVAS (Interactive SVG Workspace) -->
+            <div class="bg-slate-950/80 rounded-lg p-2 border border-slate-800/30 select-none">
+              <div class="w-full h-52 bg-[#060a14] rounded border border-slate-800/30 relative overflow-hidden flex items-center">
+                <svg id="interactive-wave-svg"
+                     class="w-full h-full cursor-crosshair"
+                     viewBox="0 0 900 220"
+                     preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="wave-glow-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.20" />
+                      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
+                    </linearGradient>
+                  </defs>
+
+                  <!-- Horizontal Needle Guide Rails with Dynamic Active Position Glow -->
+                  <line id="guide-rail-R" x1="20" y1="30" x2="880" y2="30" stroke="#334155" stroke-width="1.0" stroke-dasharray="4 4" />
+                  <text id="guide-text-R" x="12" y="33" fill="#64748b" font-size="10" font-family="ui-monospace, monospace" text-anchor="end">R</text>
+
+                  <line id="guide-rail-C" x1="20" y1="110" x2="880" y2="110" stroke="#475569" stroke-width="1.2" stroke-dasharray="6 4" />
+                  <text id="guide-text-C" x="12" y="113" fill="#64748b" font-size="10" font-family="ui-monospace, monospace" text-anchor="end">C</text>
+
+                  <line id="guide-rail-L" x1="20" y1="190" x2="880" y2="190" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 4" />
+                  <text id="guide-text-L" x="12" y="193" fill="#38bdf8" font-size="10" font-family="ui-monospace, monospace" text-anchor="end" font-weight="bold">L</text>
+
+                  <!-- Interactive Vertical Column Tracks (Populated Dynamically) -->
+                  <g id="interactive-columns"></g>
+
+                  <!-- Shaded Wave Fill Under Area -->
+                  <path id="wave-area-fill" d="" fill="url(#wave-glow-grad)" />
+
+                  <!-- Dense Satin Stitch Fill Thread Passes (For 'filled' mode) -->
+                  <g id="satin-fill-lines"></g>
+
+                  <!-- Dynamic Stitched Thread Path (Cyan Glow Line) -->
+                  <path id="thread-glow" d="" fill="none" stroke="#38bdf8" stroke-width="6" stroke-opacity="0.22" stroke-linecap="round" stroke-linejoin="round" />
+                  <path id="thread-path" d="" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 3" />
+
+                  <!-- Draggable Needle Handle Nodes (Populated Dynamically) -->
+                  <g id="interactive-nodes"></g>
+
+                  <!-- Live Drag Tooltip Marker -->
+                  <g id="drag-tooltip" style="display: none; pointer-events: none;">
+                    <rect x="0" y="0" width="75" height="22" rx="4" fill="#0f172a" stroke="#38bdf8" stroke-width="1" />
+                    <text id="drag-tooltip-text" x="37" y="15" fill="#38bdf8" font-size="11" font-family="ui-monospace, monospace" font-weight="bold" text-anchor="middle"></text>
+                  </g>
+                </svg>
+              </div>
+
+              <!-- Quick Micro Snap Controls under each Stitch Column -->
+              <div id="column-quick-snaps" class="flex gap-0.5 mt-1.5 pt-1.5 border-t border-slate-800/30 text-[8px] font-mono overflow-x-auto">
+                <!-- Dynamically populated snap buttons -->
+              </div>
+            </div>
+          </div>
+
+          <!-- MECHANICAL PROFILE & SUBTRACTIVE CUTTER CONTROLS (Minimal Border) -->
+          <div class="bg-slate-900/40 border border-slate-800/30 rounded-xl p-3.5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
+                  Mechanical Cam Edge &amp; Transition Style
+                </h2>
+                <p class="text-[11px] text-slate-400 mt-0.5">Rotary bit milling math, dwell plateaus, and sharp right-angle drops</p>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950/60 text-sky-400 border border-sky-800/40">
+                Vintage Mechanical Math
+              </span>
+            </div>
+
+            <!-- Profile Style Selector: 6 Modes with Subtractive Rotary Cutter Bit -->
+            <div>
+              <label class="block text-[11px] font-medium text-slate-300 mb-1.5">Edge Transition Engine:</label>
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 text-xs font-mono">
+                <label class="flex items-center justify-center p-1.5 rounded border cursor-pointer transition text-center {% if profile_mode == 'subtractive' %}bg-sky-950/80 border-sky-500 text-sky-300{% else %}bg-slate-950/60 border-slate-800/40 text-slate-400 hover:border-slate-700{% endif %}" id="mode-label-subtractive">
+                  <input type="radio" name="profile_mode" value="subtractive" class="sr-only" {% if profile_mode == 'subtractive' %}checked{% endif %} onchange="updateProfileMode('subtractive')">
+                  <span class="text-[11px]">Subtractive Bit</span>
+                </label>
+                <label class="flex items-center justify-center p-1.5 rounded border cursor-pointer transition text-center {% if profile_mode == 'straight_wall' %}bg-sky-950/80 border-sky-500 text-sky-300{% else %}bg-slate-950/60 border-slate-800/40 text-slate-400 hover:border-slate-700{% endif %}" id="mode-label-straight_wall">
+                  <input type="radio" name="profile_mode" value="straight_wall" class="sr-only" {% if profile_mode == 'straight_wall' %}checked{% endif %} onchange="updateProfileMode('straight_wall')">
+                  <span class="text-[11px]">Straight Wall</span>
+                </label>
+                <label class="flex items-center justify-center p-1.5 rounded border cursor-pointer transition text-center {% if profile_mode == 'gear' %}bg-sky-950/80 border-sky-500 text-sky-300{% else %}bg-slate-950/60 border-slate-800/40 text-slate-400 hover:border-slate-700{% endif %}" id="mode-label-gear">
+                  <input type="radio" name="profile_mode" value="gear" class="sr-only" {% if profile_mode == 'gear' %}checked{% endif %} onchange="updateProfileMode('gear')">
+                  <span class="text-[11px]">OEM Dwell</span>
+                </label>
+                <label class="flex items-center justify-center p-1.5 rounded border cursor-pointer transition text-center {% if profile_mode == 'sawtooth' %}bg-sky-950/80 border-sky-500 text-sky-300{% else %}bg-slate-950/60 border-slate-800/40 text-slate-400 hover:border-slate-700{% endif %}" id="mode-label-sawtooth">
+                  <input type="radio" name="profile_mode" value="sawtooth" class="sr-only" {% if profile_mode == 'sawtooth' %}checked{% endif %} onchange="updateProfileMode('sawtooth')">
+                  <span class="text-[11px]">Sawtooth Drop</span>
+                </label>
+                <label class="flex items-center justify-center p-1.5 rounded border cursor-pointer transition text-center {% if profile_mode == 'spline' %}bg-sky-950/80 border-sky-500 text-sky-300{% else %}bg-slate-950/60 border-slate-800/40 text-slate-400 hover:border-slate-700{% endif %}" id="mode-label-spline">
+                  <input type="radio" name="profile_mode" value="spline" class="sr-only" {% if profile_mode == 'spline' %}checked{% endif %} onchange="updateProfileMode('spline')">
+                  <span class="text-[11px]">Harmonic Spline</span>
+                </label>
+                <label class="flex items-center justify-center p-1.5 rounded border cursor-pointer transition text-center {% if profile_mode == 'linear' %}bg-sky-950/80 border-sky-500 text-sky-300{% else %}bg-slate-950/60 border-slate-800/40 text-slate-400 hover:border-slate-700{% endif %}" id="mode-label-linear">
+                  <input type="radio" name="profile_mode" value="linear" class="sr-only" {% if profile_mode == 'linear' %}checked{% endif %} onchange="updateProfileMode('linear')">
+                  <span class="text-[11px]">Linear Faceted</span>
+                </label>
+              </div>
+              <p id="mode-description-text" class="text-[10px] text-slate-400 mt-1">
+                {% if profile_mode == 'subtractive' %}
+                <strong class="text-sky-300">Subtractive Rotary Bit:</strong> Simulates a rotating circular endmill plunging into the 42mm blank to scoop out authentic circular gear pockets.
+                {% elif profile_mode == 'straight_wall' %}
+                <strong class="text-sky-300">Straight Wall:</strong> 100% straight radial walls perpendicular to the bore for razor-sharp corners.
+                {% else %}
+                <strong class="text-sky-300">Mechanical Mode:</strong> Dwell flat plateaus connected by machine-tooled transition flanks.
+                {% endif %}
+              </p>
+            </div>
+
+            <!-- Rotary Cutter Radius Slider (Shown when Subtractive Cutter is active) -->
+            <div id="cutter-radius-control-container" class="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/30 {% if profile_mode != 'subtractive' %}hidden{% endif %}">
+              <div class="flex justify-between items-center text-xs mb-1">
+                <span class="text-slate-300 font-medium">Rotary Cutter Bit Radius (R)</span>
+                <span class="font-mono text-sky-400 text-xs font-bold" id="cutter-val-badge">{{ cutter_radius|floatformat:1 }} mm</span>
+              </div>
+              <input
+                type="range"
+                id="cutter_radius"
+                name="cutter_radius"
+                min="1.5"
+                max="15.0"
+                step="0.5"
+                value="{{ cutter_radius }}"
+                class="cam-slider w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400"
+                oninput="document.getElementById('cutter-val-badge').innerText = parseFloat(this.value).toFixed(1) + ' mm'; triggerFormUpdate();"
+              />
+              <div class="flex justify-between text-[10px] text-slate-500 font-mono mt-0.5">
+                <span>1.5 mm (Tight Slot)</span>
+                <span>5.0 mm (Singer OEM Bit)</span>
+                <span>15.0 mm (Wide Scallop)</span>
+              </div>
+            </div>
+
+            <!-- Dwell Flatness, Corner Fillet & Cut Depth Sliders -->
+            <div id="dwell-fillet-container" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <!-- Dwell Flatness Slider -->
+              <div class="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/30">
+                <div class="flex justify-between items-center text-xs mb-1">
+                  <span class="text-slate-300 font-medium">Dwell Flatness</span>
+                  <span class="font-mono text-sky-400 text-xs font-bold" id="dwell-val-badge">60%</span>
+                </div>
+                <input
+                  type="range"
+                  id="dwell_ratio"
+                  name="dwell_ratio"
+                  min="0.00"
+                  max="0.85"
+                  step="0.05"
+                  value="{{ dwell_ratio }}"
+                  class="cam-slider w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400"
+                  oninput="document.getElementById('dwell-val-badge').innerText = Math.round(parseFloat(this.value) * 100) + '%'; triggerFormUpdate();"
+                />
+                <div class="flex justify-between text-[9px] text-slate-500 font-mono mt-0.5">
+                  <span>0% (Cont)</span>
+                  <span>60% (OEM)</span>
+                  <span>85% (Flat)</span>
+                </div>
+              </div>
+
+              <!-- Corner Blend Fillet Slider -->
+              <div class="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/30">
+                <div class="flex justify-between items-center text-xs mb-1">
+                  <span class="text-slate-300 font-medium">Corner Fillet</span>
+                  <span class="font-mono text-emerald-400 text-xs font-bold" id="fillet-val-badge">{% if corner_fillet <= 0.05 %}0% (Wall){% else %}{{ corner_fillet|floatformat:0 }}%{% endif %}</span>
+                </div>
+                <input
+                  type="range"
+                  id="corner_fillet"
+                  name="corner_fillet"
+                  min="0.00"
+                  max="1.00"
+                  step="0.05"
+                  value="{{ corner_fillet }}"
+                  class="cam-slider w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                  oninput="document.getElementById('fillet-val-badge').innerText = (parseFloat(this.value) <= 0.05 ? '0% (Wall)' : Math.round(parseFloat(this.value) * 100) + '%'); triggerFormUpdate();"
+                />
+                <div class="flex justify-between text-[9px] text-slate-500 font-mono mt-0.5">
+                  <span>0% (Razor)</span>
+                  <span>50% (OEM)</span>
+                  <span>100% (Soft)</span>
+                </div>
+              </div>
+
+              <!-- Cam Cut Depth & Satin Bight Fill Window (Up to 8.0mm) -->
+              <div class="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/30">
+                <div class="flex justify-between items-center text-xs mb-1">
+                  <span class="text-slate-300 font-medium">Bight Fill Width / Cut Depth</span>
+                  <div class="flex items-center gap-1">
+                    <input
+                      type="number"
+                      id="cut_depth_number"
+                      min="1.0"
+                      max="8.0"
+                      step="0.1"
+                      value="{{ cut_depth|floatformat:1 }}"
+                      class="w-14 px-1 py-0.5 text-xs font-mono font-bold text-amber-400 bg-slate-900 border border-slate-700/60 rounded text-center focus:border-amber-400 focus:outline-none"
+                      oninput="setCutDepthValue(this.value);"
+                      onchange="setCutDepthValue(this.value);"
+                    />
+                    <span class="text-[10px] text-amber-400 font-mono font-bold">mm</span>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  id="cut_depth_slider"
+                  min="1.0"
+                  max="8.0"
+                  step="0.1"
+                  value="{{ cut_depth }}"
+                  class="cam-slider w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                  oninput="setCutDepthValue(this.value);"
+                />
+                <div class="flex justify-between text-[9px] text-slate-500 font-mono mt-0.5">
+                  <span>1.0 mm (Utility)</span>
+                  <span>5.0 mm (OEM Standard)</span>
+                  <span>8.0 mm (Max Satin)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Flanking & Top Face Etch Inputs (Minimal Border) -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 p-2.5 bg-slate-950/60 rounded-lg border border-slate-800/30">
+              <!-- Preset / Cam # Separate Input Box -->
+              <div class="sm:col-span-3">
+                <label for="preset_number" class="block text-[11px] font-medium text-slate-300 mb-1">
+                  Preset / Cam #: <span class="text-sky-400 font-mono text-[10px]">(Top North)</span>
+                </label>
+                <input
+                  type="text"
+                  id="preset_number"
+                  name="preset_number"
+                  value="{{ preset_number|default:'1' }}"
+                  placeholder="e.g. 38, 1, 276338"
+                  class="w-full px-2.5 py-1 text-xs bg-slate-900/80 border border-slate-800/50 rounded text-sky-300 font-mono focus:border-sky-500 focus:outline-none font-bold"
+                  oninput="const m = document.getElementById('metrics-preset-num'); if(m) m.textContent = this.value; triggerFormUpdate();"
+                />
+              </div>
+
+              <!-- Disc Material Thickness Input Box -->
+              <div class="sm:col-span-2">
+                <label for="disc_thickness" class="block text-[11px] font-medium text-slate-300 mb-1">
+                  Thickness: <span class="text-amber-400 font-mono text-[10px]">(mm)</span>
+                </label>
+                <input
+                  type="number"
+                  id="disc_thickness"
+                  name="disc_thickness"
+                  min="1.0"
+                  max="10.0"
+                  step="0.5"
+                  value="{{ disc_thickness|default:'3.0' }}"
+                  class="w-full px-2 py-1 text-xs bg-slate-900/80 border border-slate-800/50 rounded text-amber-400 font-mono focus:border-sky-500 focus:outline-none font-bold text-center"
+                  oninput="const m = document.getElementById('metrics-thickness'); if(m) m.textContent = this.value + ' mm Acrylic'; triggerFormUpdate();"
+                  onchange="const m = document.getElementById('metrics-thickness'); if(m) m.textContent = this.value + ' mm Acrylic'; triggerFormUpdate();"
+                />
+              </div>
+
+              <!-- Pattern Block Label (West Flank) -->
+              <div class="sm:col-span-3">
+                <label for="cam_name" class="block text-[11px] font-medium text-slate-300 mb-1">
+                  Pattern Label: <span class="text-emerald-400 font-mono text-[10px]">(West)</span>
+                </label>
+                <input
+                  type="text"
+                  id="cam_name"
+                  name="cam_name"
+                  value="{{ cam_name }}"
+                  class="w-full px-2.5 py-1 text-xs bg-slate-900/80 border border-slate-800/50 rounded text-slate-100 font-mono focus:border-sky-500 focus:outline-none"
+                  oninput="triggerFormUpdate();"
+                />
+              </div>
+
+              <!-- Maker's Mark Name (East Flank) -->
+              <div class="sm:col-span-2">
+                <label for="maker_name" class="block text-[11px] font-medium text-slate-300 mb-1">
+                  Maker: <span class="text-emerald-400 font-mono text-[10px]">(East)</span>
+                </label>
+                <input
+                  type="text"
+                  id="maker_name"
+                  name="maker_name"
+                  value="{{ maker_name }}"
+                  class="w-full px-2 py-1 text-xs bg-slate-900/80 border border-slate-800/50 rounded text-slate-100 font-mono focus:border-sky-500 focus:outline-none"
+                  oninput="triggerFormUpdate();"
+                />
+              </div>
+
+              <!-- Mark Style (Rotation) -->
+              <div class="sm:col-span-2">
+                <label for="name_rotation" class="block text-[11px] font-medium text-slate-300 mb-1">
+                  Mark Style:
+                </label>
+                <select
+                  id="name_rotation"
+                  name="name_rotation"
+                  class="w-full px-1.5 py-1 text-xs bg-slate-900/80 border border-slate-800/50 rounded text-sky-300 font-mono focus:border-sky-500 focus:outline-none"
+                  onchange="triggerFormUpdate();">
+                  <option value="90.0" selected>Curved</option>
+                  <option value="-90.0">Reversed</option>
+                  <option value="0.0">Linear</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Kerf & Toggles Row -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-800/30">
+              <!-- Laser Kerf -->
+              <div class="bg-slate-950/40 p-2 rounded-lg border border-slate-800/30">
+                <div class="flex justify-between items-center text-xs mb-1">
+                  <span class="text-slate-300 font-medium">Laser Kerf Offset</span>
+                  <span class="font-mono text-sky-400 text-xs font-bold" id="kerf-val-badge">{{ kerf_offset }} mm</span>
+                </div>
+                <input
+                  type="range"
+                  id="kerf_offset"
+                  name="kerf_offset"
+                  min="0.00"
+                  max="0.50"
+                  step="0.01"
+                  value="{{ kerf_offset }}"
+                  class="cam-slider w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400"
+                  oninput="document.getElementById('kerf-val-badge').innerText = parseFloat(this.value).toFixed(2) + ' mm'; triggerFormUpdate();"
+                />
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono mt-0.5">
+                  <span>0.00 (Nominal)</span>
+                  <span>0.15 mm (3mm Acrylic)</span>
+                  <span>0.50 mm</span>
+                </div>
+              </div>
+
+              <!-- Toggles -->
+              <div class="bg-slate-950/40 p-2 rounded-lg border border-slate-800/30 flex flex-col justify-center space-y-1.5">
+                <label for="round_keyway" class="text-xs text-slate-300 font-medium flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="round_keyway" name="round_keyway" value="true" checked class="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700 text-sky-500 cursor-pointer" onchange="triggerFormUpdate();" />
+                  <span>Anti-Crack Radiused Keyway (R=1.5mm)</span>
+                </label>
+                <label for="enable_etch" class="text-xs text-slate-300 font-medium flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="enable_etch" name="enable_etch" value="true" checked class="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700 text-emerald-500 cursor-pointer" onchange="triggerFormUpdate();" />
+                  <span>Etch Flanking Left Pattern &amp; Right Maker Blocks</span>
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- CHILD 2: RIGHT COLUMN (Live Vector Preview & CAD/CAM Downloads) -->
+        <div class="min-w-0 space-y-3 lg:sticky lg:top-14">
+
+          <!-- Live Vector Preview Box (Minimal Border) -->
+          <div class="bg-slate-900/40 border border-slate-800/30 rounded-xl p-3.5 shadow-md relative">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 rounded-full bg-sky-400 ring-4 ring-sky-500/20"></div>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-white">Live Reactive Cam Preview (42mm)</h2>
+              </div>
+              <!-- HTMX Computing Spinner -->
+              <div class="htmx-indicator flex items-center space-x-1.5 text-xs text-sky-400 font-mono" id="preview-loading">
+                <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>Computing...</span>
+              </div>
+            </div>
+
+            <!-- Canvas Container Target for HTMX Swap -->
+            <div id="cam-preview-container"
+                 class="relative w-full aspect-square bg-slate-950/80 rounded-lg border border-slate-800/30 p-1 flex items-center justify-center overflow-hidden transition-all duration-150 shadow-inner">
+              {{ initial_svg|safe }}
+            </div>
+
+            <!-- Color Legend & Technical Guides -->
+            <div class="grid grid-cols-3 gap-1 mt-2 pt-2 border-t border-slate-800/30 text-[10px] font-mono">
+              <div class="flex items-center space-x-1 text-slate-400">
+                <span class="w-2 h-0.5 bg-sky-400 rounded-full inline-block"></span>
+                <span>Outer Cut (42mm)</span>
+              </div>
+              <div class="flex items-center space-x-1 text-slate-400">
+                <span class="w-2 h-0.5 bg-emerald-400 rounded-full inline-block"></span>
+                <span>Curved Flank Etch</span>
+              </div>
+              <div class="flex items-center space-x-1 text-slate-400">
+                <span class="w-2 h-0.5 bg-rose-500 rounded-full inline-block"></span>
+                <span>14mm Bore + Key</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CAD/CAM Download Action Panel -->
+          <div class="bg-slate-900/40 border border-slate-800/30 rounded-xl p-3 shadow-md">
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Production CAD/CAM Export (3mm Laser Cut &amp; Etch)
+            </h2>
+            <div class="grid grid-cols-2 gap-2">
+              <!-- Download SVG Button -->
+              <button
+                type="submit"
+                name="format"
+                value="svg"
+                hx-disable="true"
+                class="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 transition shadow-md shadow-sky-600/20 group focus:outline-none">
+                <svg class="w-3.5 h-3.5 mr-1.5 text-white group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download SVG
+              </button>
+
+              <!-- Download DXF Button -->
+              <button
+                type="submit"
+                name="format"
+                value="dxf"
+                hx-disable="true"
+                class="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 hover:border-slate-600 transition shadow-sm group focus:outline-none">
+                <svg class="w-3.5 h-3.5 mr-1.5 text-indigo-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download DXF
+              </button>
+            </div>
+          </div>
+
+          <!-- Real-Time Machine Specifications Panel (Minimal Border) -->
+          <div class="bg-slate-900/30 border border-slate-800/30 rounded-xl p-3 text-xs font-mono text-slate-400 space-y-1">
+            <div class="flex justify-between items-center text-slate-300 font-semibold text-[11px] uppercase tracking-wider pb-1 border-b border-slate-800/30">
+              <span>Physical Cam Specs</span>
+              <span class="text-sky-400 font-bold" id="metrics-stitches-label">{{ stitch_count }} Stitches</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Outer Max Diameter:</span>
+              <span class="text-slate-200 font-semibold">42.0 mm (R = 21.0mm)</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Min Track Diameter:</span>
+              <span class="text-slate-200 font-semibold">32.0 mm (R = 16.0mm)</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Needle Follower Travel:</span>
+              <span class="text-emerald-400 font-semibold">5.0 mm total swing</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Spindle Bore:</span>
+              <span class="text-slate-200 font-semibold">14.0 mm (R = 7.0mm)</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Keyway Slot:</span>
+              <span class="text-slate-200 font-semibold">5.0 mm L × 3.0 mm W (R=1.5mm)</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Preset / Cam #:</span>
+              <span class="text-sky-300 font-semibold" id="metrics-preset-num">{{ preset_number|default:"1" }}</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Disc Thickness:</span>
+              <span class="text-amber-400 font-semibold" id="metrics-thickness">{{ disc_thickness|default:"3.0" }} mm Acrylic</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Needle Position:</span>
+              <span class="text-sky-400 font-semibold" id="metrics-needle-pos-label">{{ metrics.needle_position_label|default:"Left (0.0mm)" }}</span>
+            </div>
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-500">Transition Engine:</span>
+              <span class="text-emerald-400 font-semibold" id="metrics-profile-label">Subtractive Rotary Bit</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </form>
+  </main>
+
+  <!-- JavaScript Dynamic Stitch Engine & Interactive Canvas Controller -->
+  <script>
+    let currentStitchCount = parseInt(document.getElementById('stitch_count').value) || 18;
+    let stitchValues = [];
+    let stitchFillMode = '{{ stitch_fill_mode|default:"unfilled" }}';
+    let currentNeedlePosition = '{{ needle_position|default:"L" }}';
+
+    function setNeedlePosition(pos, shouldMorphPattern = true) {
+      if (pos !== 'L' && pos !== 'C' && pos !== 'R') pos = 'L';
+      currentNeedlePosition = pos;
+
+      const hiddenInput = document.getElementById('needle_position');
+      if (hiddenInput) hiddenInput.value = currentNeedlePosition;
+
+      // Center and Right needle positions are definitely filled
+      if (pos === 'C' || pos === 'R') {
+        stitchFillMode = 'filled';
+        const hiddenFill = document.getElementById('stitch_fill_mode');
+        if (hiddenFill) hiddenFill.value = 'filled';
+        const btnUnfilled = document.getElementById('btn-mode-unfilled');
+        const btnFilled = document.getElementById('btn-mode-filled');
+        if (btnUnfilled) btnUnfilled.className = "px-2.5 py-0.5 text-[10px] font-mono font-medium rounded-l-md border transition bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200";
+        if (btnFilled) btnFilled.className = "px-2.5 py-0.5 text-[10px] font-mono font-medium rounded-r-md border transition bg-emerald-950 text-emerald-300 border-emerald-600";
+      }
+
+      // Update button styling
+      const btnL = document.getElementById('btn-pos-left');
+      const btnC = document.getElementById('btn-pos-center');
+      const btnR = document.getElementById('btn-pos-right');
+      const hint = document.getElementById('needle-pos-hint');
+      const metricsPos = document.getElementById('metrics-needle-pos-label');
+
+      const activeClass = "px-2.5 py-0.5 text-[10px] font-mono font-bold border transition bg-sky-950 text-sky-300 border-sky-500 shadow-sm shadow-sky-500/20";
+      const inactiveClass = "px-2.5 py-0.5 text-[10px] font-mono font-bold border transition bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200";
+
+      if (btnL) btnL.className = (pos === 'L' ? activeClass + " rounded-l-md" : inactiveClass + " rounded-l-md");
+      if (btnC) btnC.className = (pos === 'C' ? activeClass : inactiveClass);
+      if (btnR) btnR.className = (pos === 'R' ? activeClass + " rounded-r-md" : inactiveClass + " rounded-r-md");
+
+      if (hint) {
+        if (pos === 'L') hint.textContent = "Left-anchored (0) • Scallops bulge rightward";
+        else if (pos === 'C') hint.textContent = "Center-anchored (6) • Mirrored into filled diamonds";
+        else hint.textContent = "Right-anchored (12) • Inverted negative filling from top";
+      }
+
+      if (metricsPos) {
+        metricsPos.textContent = (pos === 'L' ? "Left (0.0mm)" : (pos === 'C' ? "Center (6.0mm)" : "Right (12.0mm)"));
+      }
+
+      // Dynamic guide rail highlight on SVG canvas
+      const guideL = document.getElementById('guide-rail-L');
+      const textL = document.getElementById('guide-text-L');
+      const guideC = document.getElementById('guide-rail-C');
+      const textC = document.getElementById('guide-text-C');
+      const guideR = document.getElementById('guide-rail-R');
+      const textR = document.getElementById('guide-text-R');
+
+      if (guideL) {
+        guideL.setAttribute('stroke', pos === 'L' ? '#38bdf8' : '#334155');
+        guideL.setAttribute('stroke-width', pos === 'L' ? '1.8' : '1.0');
+      }
+      if (textL) {
+        textL.setAttribute('fill', pos === 'L' ? '#38bdf8' : '#64748b');
+        textL.setAttribute('font-weight', pos === 'L' ? 'bold' : 'normal');
+      }
+      if (guideC) {
+        guideC.setAttribute('stroke', pos === 'C' ? '#38bdf8' : '#475569');
+        guideC.setAttribute('stroke-width', pos === 'C' ? '1.8' : '1.2');
+      }
+      if (textC) {
+        textC.setAttribute('fill', pos === 'C' ? '#38bdf8' : '#64748b');
+        textC.setAttribute('font-weight', pos === 'C' ? 'bold' : 'normal');
+      }
+      if (guideR) {
+        guideR.setAttribute('stroke', pos === 'R' ? '#38bdf8' : '#334155');
+        guideR.setAttribute('stroke-width', pos === 'R' ? '1.8' : '1.0');
+      }
+      if (textR) {
+        textR.setAttribute('fill', pos === 'R' ? '#38bdf8' : '#64748b');
+        textR.setAttribute('font-weight', pos === 'R' ? 'bold' : 'normal');
+      }
+
+      if (shouldMorphPattern) {
+        const camNameInput = document.getElementById('cam_name');
+        const nameVal = (camNameInput ? camNameInput.value.toUpperCase() : "");
+        if (nameVal.includes('SCALLOP') || nameVal.includes('WAVE')) {
+          setScallopForPosition(pos);
+          return;
+        }
+      }
+
+      renderWavePath();
+      triggerFormUpdate();
+    }
+
+    function setCutDepthValue(val) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 5.0;
+      num = Math.max(1.0, Math.min(8.0, Math.round(num * 10) / 10));
+
+      const slider = document.getElementById('cut_depth_slider');
+      const numInput = document.getElementById('cut_depth_number');
+      const hiddenInput = document.getElementById('cut_depth');
+      const badge = document.getElementById('cut-depth-badge');
+
+      if (slider) slider.value = num.toFixed(1);
+      if (numInput && numInput !== document.activeElement) numInput.value = num.toFixed(1);
+      if (hiddenInput) hiddenInput.value = num.toFixed(1);
+      if (badge) badge.innerText = num.toFixed(1) + ' mm';
+
+      const metricsFollower = document.getElementById('metrics-travel-label');
+      if (metricsFollower) metricsFollower.textContent = num.toFixed(1) + ' mm total swing';
+
+      triggerFormUpdate();
+    }
+
+    function setScallopForPosition(pos) {
+      if (!pos) pos = currentNeedlePosition;
+      // Generates authentic sinusoidal/scallop wave aligned to the needle position (L, C, or R)
+      const numWaves = Math.max(1, Math.round(currentStitchCount / 9)); // e.g. 2 waves for 18 stitches, 3 waves for 24 stitches
+      for (let i = 0; i < currentStitchCount; i++) {
+        const u = (i * numWaves * 2.0 * Math.PI) / currentStitchCount;
+        if (pos === 'L') {
+          // Left-anchored: baseline at 0 (Left), scallop crests bulge rightward to 12
+          const wave = Math.max(0, Math.sin(u));
+          stitchValues[i] = Math.round(wave * 12.0);
+        } else if (pos === 'R') {
+          // Right-anchored: baseline at 12 (Right), scallop crests bulge leftward to 0
+          const wave = Math.max(0, Math.sin(u));
+          stitchValues[i] = Math.round(12.0 - (wave * 12.0));
+        } else {
+          // Center: symmetrical sinusoidal wave oscillating across Center (6)
+          const wave = Math.sin(u);
+          stitchValues[i] = Math.round(6.0 + (wave * 6.0));
+        }
+      }
+      syncHiddenInputs();
+      rebuildCanvas();
+      const camNameInput = document.getElementById('cam_name');
+      if (camNameInput) {
+        const posLabel = (pos === 'L' ? "LEFT" : (pos === 'C' ? "CENTER" : "RIGHT"));
+        camNameInput.value = `SCALLOP (${posLabel})`;
+      }
+      triggerFormUpdate();
+    }
+
+    function setStitchFillMode(mode) {
+      stitchFillMode = (mode === 'filled') ? 'filled' : 'unfilled';
+      const hiddenInput = document.getElementById('stitch_fill_mode');
+      if (hiddenInput) hiddenInput.value = stitchFillMode;
+
+      const btnUnfilled = document.getElementById('btn-mode-unfilled');
+      const btnFilled = document.getElementById('btn-mode-filled');
+      const hint = document.getElementById('seam-mode-hint');
+
+      if (stitchFillMode === 'filled') {
+        if (btnUnfilled) btnUnfilled.className = "px-2.5 py-0.5 text-[10px] font-mono font-medium rounded-l-md border transition bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200";
+        if (btnFilled) btnFilled.className = "px-2.5 py-0.5 text-[10px] font-mono font-medium rounded-r-md border transition bg-emerald-950 text-emerald-300 border-emerald-600";
+        if (hint) hint.textContent = "Satin stitch: near-zero feed packs threads into solid blocks";
+      } else {
+        if (btnUnfilled) btnUnfilled.className = "px-2.5 py-0.5 text-[10px] font-mono font-medium rounded-l-md border transition bg-sky-950 text-sky-300 border-sky-600";
+        if (btnFilled) btnFilled.className = "px-2.5 py-0.5 text-[10px] font-mono font-medium rounded-r-md border transition bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200";
+        if (hint) hint.textContent = "Open stitch: standard feed length traces running outline";
+      }
+
+      renderWavePath();
+      triggerFormUpdate();
+    }
+
+    // Read initial stitch values
+    for (let i = 0; i < currentStitchCount; i++) {
+      const input = document.getElementById('step_' + i);
+      stitchValues.push(input ? parseFloat(input.value) || 0 : 0);
+    }
+    if (stitchValues.length === 0) {
+      stitchValues = [0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12];
+    }
+
+    // Geometry mapping for 900x220 SVG canvas
+    const CANVAS_WIDTH = 900;
+    const CANVAS_HEIGHT = 220;
+    const MARGIN_X = 35;
+    const Y_TOP = 30;     // Bight 12 (Right)
+    const Y_BOTTOM = 190; // Bight 0 (Left)
+    const Y_RANGE = Y_BOTTOM - Y_TOP; // 160px
+
+    function bightToY(bight) {
+      return Y_BOTTOM - ((bight / 12.0) * Y_RANGE);
+    }
+
+    function yToBight(y) {
+      const clampedY = Math.max(Y_TOP, Math.min(Y_BOTTOM, y));
+      const fraction = (Y_BOTTOM - clampedY) / Y_RANGE;
+      return Math.round(fraction * 12.0);
+    }
+
+    function getColumnX(i) {
+      if (currentStitchCount <= 1) return CANVAS_WIDTH / 2;
+      return MARGIN_X + (i * ((CANVAS_WIDTH - (MARGIN_X * 2)) / (currentStitchCount - 1)));
+    }
+
+    // Debounced HTMX trigger
+    let isPointerDown = false;
+    let debouncedUpdateTimer = null;
+
+    function triggerFormUpdate() {
+      clearTimeout(debouncedUpdateTimer);
+      debouncedUpdateTimer = setTimeout(() => {
+        const form = document.getElementById('cam-form');
+        if (window.htmx) {
+          htmx.trigger(form, 'change');
+        }
+      }, 50);
+    }
+
+    function updateProfileMode(mode) {
+      ['subtractive', 'straight_wall', 'gear', 'sawtooth', 'spline', 'linear'].forEach(m => {
+        const label = document.getElementById('mode-label-' + m);
+        if (label) {
+          if (m === mode) {
+            label.className = "flex items-center justify-center p-1.5 rounded border cursor-pointer transition text-center bg-sky-950/80 border-sky-500 text-sky-300";
+          } else {
+            label.className = "flex items-center justify-center p-1.5 rounded border cursor-pointer transition text-center bg-slate-950/60 border-slate-800/40 text-slate-400 hover:border-slate-700";
+          }
+        }
+      });
+
+      const cutterContainer = document.getElementById('cutter-radius-control-container');
+      const dwellFilletContainer = document.getElementById('dwell-fillet-container');
+      const descText = document.getElementById('mode-description-text');
+      const metricsLabel = document.getElementById('metrics-profile-label');
+
+      if (mode === 'subtractive') {
+        if (cutterContainer) cutterContainer.classList.remove('hidden');
+        if (dwellFilletContainer) dwellFilletContainer.classList.add('opacity-60');
+        if (descText) descText.innerHTML = '<strong class="text-sky-300">Subtractive Rotary Bit:</strong> Simulates a rotating circular endmill plunging into the 42mm blank to scoop out authentic circular gear pockets.';
+        if (metricsLabel) metricsLabel.textContent = "Subtractive Rotary Bit";
+      } else if (mode === 'straight_wall') {
+        if (cutterContainer) cutterContainer.classList.add('hidden');
+        if (dwellFilletContainer) dwellFilletContainer.classList.remove('opacity-60');
+        if (descText) descText.innerHTML = '<strong class="text-sky-300">Straight Wall:</strong> 100% straight radial walls perpendicular to the bore for razor-sharp corners.';
+        if (metricsLabel) metricsLabel.textContent = "Straight Radial Walls";
+      } else if (mode === 'gear') {
+        if (cutterContainer) cutterContainer.classList.add('hidden');
+        if (dwellFilletContainer) dwellFilletContainer.classList.remove('opacity-60');
+        if (descText) descText.innerHTML = '<strong class="text-sky-300">OEM Dwell:</strong> Authentic circular dwell flats connected by transition flanks with corner blend fillets.';
+        if (metricsLabel) metricsLabel.textContent = "OEM Dwell Plateaus";
+      } else if (mode === 'sawtooth') {
+        if (cutterContainer) cutterContainer.classList.add('hidden');
+        if (dwellFilletContainer) dwellFilletContainer.classList.remove('opacity-60');
+        if (descText) descText.innerHTML = '<strong class="text-sky-300">Sawtooth Drop:</strong> Progressive rising ramps with steep right-angle drops.';
+        if (metricsLabel) metricsLabel.textContent = "Right-Angle Sawtooth Drop";
+      } else if (mode === 'spline') {
+        if (cutterContainer) cutterContainer.classList.add('hidden');
+        if (dwellFilletContainer) dwellFilletContainer.classList.remove('opacity-60');
+        if (descText) descText.innerHTML = '<strong class="text-sky-300">Harmonic Spline:</strong> Smooth continuous Catmull-Rom periodic curve.';
+        if (metricsLabel) metricsLabel.textContent = "Harmonic Spline";
+      } else {
+        if (cutterContainer) cutterContainer.classList.add('hidden');
+        if (dwellFilletContainer) dwellFilletContainer.classList.remove('opacity-60');
+        if (descText) descText.innerHTML = '<strong class="text-sky-300">Linear Faceted:</strong> Polygonal chords directly connecting consecutive stitch points.';
+        if (metricsLabel) metricsLabel.textContent = "Linear Faceted";
+      }
+      triggerFormUpdate();
+    }
+
+    function setExactStitchCount(newCount) {
+      newCount = Math.max(6, Math.min(36, parseInt(newCount)));
+      if (newCount === currentStitchCount) return;
+
+      const oldCount = currentStitchCount;
+      const oldVals = [...stitchValues];
+      const newVals = [];
+
+      // Resample / interpolate values onto new stitch count
+      for (let i = 0; i < newCount; i++) {
+        if (oldCount > 1) {
+          const srcIdx = (i / (newCount - 1)) * (oldCount - 1);
+          const lowIdx = Math.floor(srcIdx);
+          const highIdx = Math.min(oldCount - 1, Math.ceil(srcIdx));
+          const weight = srcIdx - lowIdx;
+          const val = Math.round((oldVals[lowIdx] * (1 - weight)) + (oldVals[highIdx] * weight));
+          newVals.push(val);
+        } else {
+          newVals.push(oldVals[0] || 0);
+        }
+      }
+
+      currentStitchCount = newCount;
+      stitchValues = newVals;
+      document.getElementById('stitch_count').value = newCount;
+      document.getElementById('stitch-count-badge').textContent = newCount;
+      const mLabel = document.getElementById('metrics-stitches-label');
+      if (mLabel) mLabel.textContent = newCount + " Stitches";
+
+      syncHiddenInputs();
+      rebuildCanvas();
+      triggerFormUpdate();
+    }
+
+    function changeStitchCount(delta) {
+      setExactStitchCount(currentStitchCount + delta);
+    }
+
+    function syncHiddenInputs() {
+      const container = document.getElementById('hidden-inputs-container');
+      if (!container) return;
+      let html = '';
+      for (let i = 0; i < currentStitchCount; i++) {
+        const val = stitchValues[i] !== undefined ? stitchValues[i] : 0;
+        html += `<input type="hidden" id="step_${i}" name="step_${i}" value="${val}" />\n`;
+      }
+      container.innerHTML = html;
+    }
+
+    function updateWaveNode(index, bightVal, shouldTriggerHTMX = true) {
+      if (index < 0 || index >= currentStitchCount) return;
+      const clamped = Math.max(0, Math.min(12, Math.round(bightVal)));
+      stitchValues[index] = clamped;
+
+      const input = document.getElementById('step_' + index);
+      if (input) input.value = clamped;
+
+      const nodeCircle = document.getElementById('node-circle-' + index);
+      const nodeGlow = document.getElementById('node-glow-' + index);
+      const nodeValText = document.getElementById('node-val-' + index);
+
+      const y = bightToY(clamped);
+      if (nodeCircle) nodeCircle.setAttribute('cy', y);
+      if (nodeGlow) nodeGlow.setAttribute('cy', y);
+      if (nodeValText) {
+        nodeValText.setAttribute('y', y - 9);
+        nodeValText.textContent = clamped;
+      }
+
+      renderWavePath();
+      if (shouldTriggerHTMX) {
+        triggerFormUpdate();
+      }
+    }
+
+    function renderWavePath() {
+      if (currentStitchCount === 0) return;
+      const threadPath = document.getElementById('thread-path');
+      const threadGlow = document.getElementById('thread-glow');
+      const waveAreaFill = document.getElementById('wave-area-fill');
+      const satinGroup = document.getElementById('satin-fill-lines');
+      const Y_CENTER = (Y_TOP + Y_BOTTOM) / 2; // 110px
+
+      if (currentNeedlePosition === 'C') {
+        // Mirrored from Center line: serrations become filled diamonds!
+        let topPts = [];
+        let botPts = [];
+        for (let i = 0; i < currentStitchCount; i++) {
+          const x = getColumnX(i);
+          const y = bightToY(stitchValues[i]);
+          const delta = Math.abs(y - Y_CENTER);
+          topPts.push({ x: x, y: Y_CENTER - delta });
+          botPts.push({ x: x, y: Y_CENTER + delta });
+        }
+
+        let dTop = `M ${topPts[0].x.toFixed(1)} ${topPts[0].y.toFixed(1)}`;
+        let dBot = `M ${botPts[0].x.toFixed(1)} ${botPts[0].y.toFixed(1)}`;
+        for (let i = 1; i < currentStitchCount; i++) {
+          dTop += ` L ${topPts[i].x.toFixed(1)} ${topPts[i].y.toFixed(1)}`;
+          dBot += ` L ${botPts[i].x.toFixed(1)} ${botPts[i].y.toFixed(1)}`;
+        }
+
+        if (threadPath) threadPath.setAttribute('d', dTop + ' ' + dBot);
+        if (threadGlow) threadGlow.setAttribute('d', dTop + ' ' + dBot);
+
+        if (waveAreaFill) {
+          // Closed diamond ribbon: forward along top contour, backward along bottom contour
+          let areaD = dTop;
+          for (let i = currentStitchCount - 1; i >= 0; i--) {
+            areaD += ` L ${botPts[i].x.toFixed(1)} ${botPts[i].y.toFixed(1)}`;
+          }
+          areaD += ' Z';
+          waveAreaFill.setAttribute('d', areaD);
+          waveAreaFill.setAttribute('fill-opacity', '0.45');
+        }
+
+        // Dense satin thread passes mirrored symmetrically across center line
+        if (satinGroup) {
+          let lines = '';
+          const xStart = getColumnX(0);
+          const xEnd = getColumnX(currentStitchCount - 1);
+          const stepPx = 4.0;
+          for (let px = xStart; px <= xEnd; px += stepPx) {
+            let yVal = Y_CENTER;
+            for (let i = 0; i < currentStitchCount - 1; i++) {
+              const x0 = getColumnX(i);
+              const x1 = getColumnX(i + 1);
+              if (px >= x0 && px <= x1) {
+                const u = (x1 > x0) ? (px - x0) / (x1 - x0) : 0;
+                const b0 = stitchValues[i];
+                const b1 = stitchValues[i + 1];
+                const bInterp = b0 + (u * (b1 - b0));
+                yVal = bightToY(bInterp);
+                break;
+              }
+            }
+            const delta = Math.abs(yVal - Y_CENTER);
+            if (delta > 1.5) {
+              const y1 = Y_CENTER - delta;
+              const y2 = Y_CENTER + delta;
+              lines += `<line x1="${px.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${px.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#38bdf8" stroke-width="2.5" stroke-opacity="0.85" />`;
+            }
+          }
+          satinGroup.innerHTML = lines;
+        }
+      } else if (currentNeedlePosition === 'R') {
+        // Right needle position: negative to positive filling!
+        // Whole top is filled down to the wave, bottom of line is unfilled
+        let d = `M ${getColumnX(0).toFixed(1)} ${bightToY(stitchValues[0]).toFixed(1)}`;
+        for (let i = 1; i < currentStitchCount; i++) {
+          d += ` L ${getColumnX(i).toFixed(1)} ${bightToY(stitchValues[i]).toFixed(1)}`;
+        }
+
+        if (threadPath) threadPath.setAttribute('d', d);
+        if (threadGlow) threadGlow.setAttribute('d', d);
+
+        if (waveAreaFill) {
+          const xEnd = getColumnX(currentStitchCount - 1);
+          const xStart = getColumnX(0);
+          const areaD = d + ` L ${xEnd} ${Y_TOP} L ${xStart} ${Y_TOP} Z`;
+          waveAreaFill.setAttribute('d', areaD);
+          waveAreaFill.setAttribute('fill-opacity', '0.45');
+        }
+
+        // Satin threads filling down from top baseline to the wave
+        if (satinGroup) {
+          let lines = '';
+          const xStart = getColumnX(0);
+          const xEnd = getColumnX(currentStitchCount - 1);
+          const stepPx = 4.0;
+          for (let px = xStart; px <= xEnd; px += stepPx) {
+            let yVal = Y_TOP;
+            for (let i = 0; i < currentStitchCount - 1; i++) {
+              const x0 = getColumnX(i);
+              const x1 = getColumnX(i + 1);
+              if (px >= x0 && px <= x1) {
+                const u = (x1 > x0) ? (px - x0) / (x1 - x0) : 0;
+                const b0 = stitchValues[i];
+                const b1 = stitchValues[i + 1];
+                const bInterp = b0 + (u * (b1 - b0));
+                yVal = bightToY(bInterp);
+                break;
+              }
+            }
+            if (yVal > Y_TOP + 2) {
+              lines += `<line x1="${px.toFixed(1)}" y1="${Y_TOP}" x2="${px.toFixed(1)}" y2="${yVal.toFixed(1)}" stroke="#38bdf8" stroke-width="2.5" stroke-opacity="0.85" />`;
+            }
+          }
+          satinGroup.innerHTML = lines;
+        }
+      } else {
+        // Left needle position: positive filling from bottom up to wave
+        let d = `M ${getColumnX(0).toFixed(1)} ${bightToY(stitchValues[0]).toFixed(1)}`;
+        for (let i = 1; i < currentStitchCount; i++) {
+          d += ` L ${getColumnX(i).toFixed(1)} ${bightToY(stitchValues[i]).toFixed(1)}`;
+        }
+
+        if (threadPath) threadPath.setAttribute('d', d);
+        if (threadGlow) threadGlow.setAttribute('d', d);
+
+        if (waveAreaFill) {
+          const xEnd = getColumnX(currentStitchCount - 1);
+          const xStart = getColumnX(0);
+          const areaD = d + ` L ${xEnd} ${Y_BOTTOM} L ${xStart} ${Y_BOTTOM} Z`;
+          waveAreaFill.setAttribute('d', areaD);
+          waveAreaFill.setAttribute('fill-opacity', (stitchFillMode === 'filled' ? '0.45' : '0.20'));
+        }
+
+        if (satinGroup) {
+          if (stitchFillMode === 'filled') {
+            let lines = '';
+            const xStart = getColumnX(0);
+            const xEnd = getColumnX(currentStitchCount - 1);
+            const stepPx = 4.0;
+            for (let px = xStart; px <= xEnd; px += stepPx) {
+              let yVal = Y_BOTTOM;
+              for (let i = 0; i < currentStitchCount - 1; i++) {
+                const x0 = getColumnX(i);
+                const x1 = getColumnX(i + 1);
+                if (px >= x0 && px <= x1) {
+                  const u = (x1 > x0) ? (px - x0) / (x1 - x0) : 0;
+                  const b0 = stitchValues[i];
+                  const b1 = stitchValues[i + 1];
+                  const bInterp = b0 + (u * (b1 - b0));
+                  yVal = bightToY(bInterp);
+                  break;
+                }
+              }
+              if (yVal < Y_BOTTOM - 2) {
+                lines += `<line x1="${px.toFixed(1)}" y1="${Y_BOTTOM}" x2="${px.toFixed(1)}" y2="${yVal.toFixed(1)}" stroke="#38bdf8" stroke-width="2.5" stroke-opacity="0.85" />`;
+              }
+            }
+            satinGroup.innerHTML = lines;
+          } else {
+            satinGroup.innerHTML = '';
+          }
+        }
+      }
+    }
+
+    function rebuildCanvas() {
+      const columnsGroup = document.getElementById('interactive-columns');
+      const nodesGroup = document.getElementById('interactive-nodes');
+      const quickSnapsContainer = document.getElementById('column-quick-snaps');
+
+      let colMarkup = '';
+      let nodesMarkup = '';
+      let quickSnapsMarkup = '';
+
+      for (let i = 0; i < currentStitchCount; i++) {
+        const x = getColumnX(i);
+        const bight = stitchValues[i];
+        const y = bightToY(bight);
+        const angle = Math.round(i * (360.0 / currentStitchCount));
+
+        // Column track
+        colMarkup += `
+          <g class="wave-column-track" data-index="${i}">
+            <rect x="${x - 14}" y="12" width="28" height="196" fill="transparent" />
+            <line class="column-guide" x1="${x}" y1="20" x2="${x}" y2="200" stroke="#1e293b" stroke-width="1" stroke-dasharray="2 3" />
+            <circle cx="${x}" y="110" r="1.5" fill="#334155" />
+            <circle cx="${x}" y="30" r="1.5" fill="#334155" />
+            <circle cx="${x}" y="190" r="1.5" fill="#334155" />
+            <text x="${x}" y="16" fill="#64748b" font-size="8.5" font-family="ui-monospace, monospace" text-anchor="middle">#${i+1}</text>
+            <text x="${x}" y="214" fill="#475569" font-size="7.5" font-family="ui-monospace, monospace" text-anchor="middle">${angle}°</text>
+          </g>
+        `;
+
+        // Tactile Node
+        nodesMarkup += `
+          <g id="node-group-${i}" class="wave-node-group" data-index="${i}">
+            <circle id="node-glow-${i}" cx="${x}" cy="${y}" r="10" fill="#38bdf8" fill-opacity="0.16" pointer-events="none" />
+            <circle id="node-circle-${i}" class="wave-node-handle" cx="${x}" cy="${y}" r="5.5" fill="#030712" stroke="#38bdf8" stroke-width="2.0" />
+            <text id="node-val-${i}" x="${x}" y="${y - 9}" fill="#38bdf8" font-size="9" font-family="ui-monospace, monospace" font-weight="bold" text-anchor="middle" pointer-events="none">${bight}</text>
+          </g>
+        `;
+
+        // Micro snap button
+        quickSnapsMarkup += `
+          <div class="flex flex-col items-center bg-slate-950/60 p-0.5 rounded border border-slate-900/60 flex-1 min-w-[18px]">
+            <span class="text-slate-500 text-[7px] mb-0.5">#${i+1}</span>
+            <div class="flex flex-col gap-0.5 w-full">
+              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, 12);" title="Snap Right (12)">R</button>
+              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, 6);" title="Snap Center (6)">C</button>
+              <button type="button" class="py-0.5 rounded bg-slate-900 hover:bg-sky-950 text-slate-400 hover:text-sky-300 transition text-[7.5px]" onclick="updateWaveNode(${i}, 0);" title="Snap Left (0)">L</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (columnsGroup) columnsGroup.innerHTML = colMarkup;
+      if (nodesGroup) nodesGroup.innerHTML = nodesMarkup;
+      if (quickSnapsContainer) quickSnapsContainer.innerHTML = quickSnapsMarkup;
+
+      renderWavePath();
+    }
+
+    function initInteractiveWave() {
+      const svg = document.getElementById('interactive-wave-svg');
+      syncHiddenInputs();
+      rebuildCanvas();
+
+      function getSVGCoordinates(evt) {
+        const pt = svg.createSVGPoint();
+        if (evt.touches && evt.touches.length > 0) {
+          pt.x = evt.touches[0].clientX;
+          pt.y = evt.touches[0].clientY;
+        } else {
+          pt.x = evt.clientX;
+          pt.y = evt.clientY;
+        }
+        return pt.matrixTransform(svg.getScreenCTM().inverse());
+      }
+
+      function findClosestColumn(svgX) {
+        let closestIndex = 0;
+        let minDiff = 99999;
+        for (let i = 0; i < currentStitchCount; i++) {
+          const colX = getColumnX(i);
+          const diff = Math.abs(svgX - colX);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIndex = i;
+          }
+        }
+        return closestIndex;
+      }
+
+      function handlePointerInteraction(evt) {
+        const coords = getSVGCoordinates(evt);
+        const colIndex = findClosestColumn(coords.x);
+        const bightVal = yToBight(coords.y);
+        updateWaveNode(colIndex, bightVal);
+
+        const tooltip = document.getElementById('drag-tooltip');
+        const tooltipText = document.getElementById('drag-tooltip-text');
+        if (tooltip && tooltipText) {
+          tooltip.style.display = 'block';
+          const tX = Math.max(10, Math.min(815, getColumnX(colIndex) - 37));
+          const tY = Math.max(5, coords.y - 30);
+          tooltip.setAttribute('transform', `translate(${tX}, ${tY})`);
+          tooltipText.textContent = `#${colIndex + 1}: ${bightVal}/12`;
+        }
+      }
+
+      svg.addEventListener('mousedown', function(evt) {
+        isPointerDown = true;
+        handlePointerInteraction(evt);
+      });
+
+      window.addEventListener('mousemove', function(evt) {
+        if (!isPointerDown) return;
+        handlePointerInteraction(evt);
+      });
+
+      window.addEventListener('mouseup', function() {
+        if (isPointerDown) {
+          isPointerDown = false;
+          const tooltip = document.getElementById('drag-tooltip');
+          if (tooltip) tooltip.style.display = 'none';
+        }
+      });
+
+      svg.addEventListener('touchstart', function(evt) {
+        isPointerDown = true;
+        handlePointerInteraction(evt);
+        evt.preventDefault();
+      }, { passive: false });
+
+      svg.addEventListener('touchmove', function(evt) {
+        if (!isPointerDown) return;
+        handlePointerInteraction(evt);
+        evt.preventDefault();
+      }, { passive: false });
+
+      svg.addEventListener('touchend', function() {
+        isPointerDown = false;
+        const tooltip = document.getElementById('drag-tooltip');
+        if (tooltip) tooltip.style.display = 'none';
+      });
+    }
+
+    function applyPreset(stepsArray, presetId, presetName, presetNeedlePos, presetNumber) {
+      if (!stepsArray || stepsArray.length === 0) return;
+      currentStitchCount = stepsArray.length;
+      stitchValues = [...stepsArray];
+      document.getElementById('stitch_count').value = currentStitchCount;
+      document.getElementById('stitch-count-badge').textContent = currentStitchCount;
+      const mLabel = document.getElementById('metrics-stitches-label');
+      if (mLabel) mLabel.textContent = currentStitchCount + " Stitches";
+
+      syncHiddenInputs();
+      rebuildCanvas();
+
+      if (presetId === 'disc_38' || presetId === 'oem_squares') {
+        const straightModeRadio = document.querySelector('input[name="profile_mode"][value="straight_wall"]');
+        if (straightModeRadio) {
+          straightModeRadio.checked = true;
+          updateProfileMode('straight_wall');
+        }
+      }
+
+      if (presetNeedlePos) {
+        setNeedlePosition(presetNeedlePos, false);
+      }
+
+      const camNameInput = document.getElementById('cam_name');
+      if (camNameInput && presetName) {
+        camNameInput.value = presetName.toUpperCase();
+      }
+
+      const presetNumInput = document.getElementById('preset_number');
+      if (presetNumInput) {
+        const val = presetNumber || presetId.replace('disc_', '').replace('cam_', '').toUpperCase();
+        presetNumInput.value = val;
+        const mPreset = document.getElementById('metrics-preset-num');
+        if (mPreset) mPreset.textContent = val;
+      }
+
+      triggerFormUpdate();
+    }
+
+    function setCompoundBanner() {
+      // Compound pattern: Straight line stem (0) + Satin zigzag block (12/0)
+      for (let i = 0; i < currentStitchCount; i++) {
+        if (i < Math.floor(currentStitchCount / 3)) {
+          stitchValues[i] = 0; // Straight line baseline stem
+        } else if (i < Math.floor((currentStitchCount * 2) / 3)) {
+          stitchValues[i] = (i % 2 === 0) ? 12 : 0; // Alternating bight -> solid satin block
+        } else {
+          stitchValues[i] = 0; // Return to straight line baseline
+        }
+      }
+      setStitchFillMode('filled');
+      syncHiddenInputs();
+      rebuildCanvas();
+      const camNameInput = document.getElementById('cam_name');
+      if (camNameInput) camNameInput.value = "COMPOUND BANNER";
+      triggerFormUpdate();
+    }
+
+    function setSquareBlocks() {
+      // Disc #38 (Part #276338): Alternating high (12) and low (0) square dwell blocks
+      for (let i = 0; i < currentStitchCount; i++) {
+        stitchValues[i] = (Math.floor(i / 2) % 2 === 0) ? 12 : 0;
+      }
+      const straightModeRadio = document.querySelector('input[name="profile_mode"][value="straight_wall"]');
+      if (straightModeRadio) {
+        straightModeRadio.checked = true;
+        updateProfileMode('straight_wall');
+      }
+      syncHiddenInputs();
+      rebuildCanvas();
+      const camNameInput = document.getElementById('cam_name');
+      if (camNameInput) camNameInput.value = "DISC #38 BLOCKS";
+      triggerFormUpdate();
+    }
+
+    function setSquareTeeth() {
+      // 1-step alternating high (12) and low (0) gear teeth
+      for (let i = 0; i < currentStitchCount; i++) {
+        stitchValues[i] = (i % 2 === 0) ? 12 : 0;
+      }
+      syncHiddenInputs();
+      rebuildCanvas();
+      const camNameInput = document.getElementById('cam_name');
+      if (camNameInput) camNameInput.value = "SQUARE TEETH";
+      triggerFormUpdate();
+    }
+
+    function setSawtooth() {
+      // Sawtooth ramps with sharp drop-offs
+      const period = Math.max(3, Math.floor(currentStitchCount / 3));
+      for (let i = 0; i < currentStitchCount; i++) {
+        const stepInPeriod = i % period;
+        stitchValues[i] = Math.round((stepInPeriod / (period - 1)) * 12);
+      }
+      syncHiddenInputs();
+      rebuildCanvas();
+      const camNameInput = document.getElementById('cam_name');
+      if (camNameInput) camNameInput.value = "SAWTOOTH";
+      triggerFormUpdate();
+    }
+
+    function invertPattern() {
+      for (let i = 0; i < currentStitchCount; i++) {
+        stitchValues[i] = 12 - stitchValues[i];
+      }
+      syncHiddenInputs();
+      rebuildCanvas();
+      triggerFormUpdate();
+    }
+
+    function mirrorPattern() {
+      stitchValues.reverse();
+      syncHiddenInputs();
+      rebuildCanvas();
+      triggerFormUpdate();
+    }
+
+    function resetPattern(val) {
+      for (let i = 0; i < currentStitchCount; i++) {
+        stitchValues[i] = val;
+      }
+      syncHiddenInputs();
+      rebuildCanvas();
+      triggerFormUpdate();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initInteractiveWave();
+    });
+  </script>
+</body>
+</html>
