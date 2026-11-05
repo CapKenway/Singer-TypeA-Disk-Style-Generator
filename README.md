@@ -67,3 +67,12 @@ A lightweight, serverless-optimized CAD/CAM web application built with **Django 
    - **Step 3:** Cut the **42mm outer cam perimeter** last (Layer: `CUT_OUTER` / Red `#FF0000`).
 2. **Material:** Use **cast acrylic** (PMMA) for crisp etched lines and clean cut edges.
 3. **Kerf Tuning:** Default kerf is set to `0.15 mm`. If the cam fits too tightly onto your machine's 14mm spindle, increase the kerf offset slider slightly (e.g. `0.18 mm`).
+
+---
+
+## License & Credits
+
+This project is open-source software licensed under the **[MIT License](LICENSE)**.
+
+- **Developer:** [Abdul Wahab](https://github.com/capkenway)
+- **Portfolio:** [capkenway.github.io](https://capkenway.github.io)

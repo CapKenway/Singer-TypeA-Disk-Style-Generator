@@ -294,7 +294,7 @@ class CamViewsTestCase(TestCase):
         self.client = Client()
 
     def test_index_view(self):
-        """Workbench dashboard loads successfully with status 200."""
+        """Workbench dashboard loads successfully with status 200, portfolio link, and license."""
         response = self.client.get(reverse('index_view'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "42mm")
@@ -305,6 +305,8 @@ class CamViewsTestCase(TestCase):
         self.assertContains(response, 'name="dwell_ratio"')
         self.assertContains(response, 'workbench-layout')
         self.assertContains(response, 'straight_wall')
+        self.assertContains(response, 'capkenway.github.io')
+        self.assertContains(response, 'MIT License')
 
     def test_preview_cam_view_dynamic_stitches_and_gear_mode(self):
         """HTMX preview endpoint handles dynamic stitch counts and gear dwell mode."""
