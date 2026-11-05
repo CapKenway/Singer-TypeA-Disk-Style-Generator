@@ -149,19 +149,19 @@ def generate_cam_svg(
     clean_pos = needle_position.strip().upper() if needle_position in ('L', 'C', 'R') else 'L'
 
     if enable_etch and left_block and right_block:
-        title_pos = left_block.get('title_pos', (-12.4, -4.5))
-        subtitle_pos = left_block.get('subtitle_pos', (-12.4, 4.5))
-        title_strokes = render_vector_text_linear(
+        title_strokes = render_vector_text_arc(
             text=cam_label,
-            center_x=title_pos[0],
-            center_y=title_pos[1],
-            char_height=0.82
+            radius=left_block.get('title_r', 13.85),
+            start_angle_deg=154.0,
+            end_angle_deg=206.0,
+            char_height=0.75
         )
-        subtitle_strokes = render_vector_text_linear(
+        subtitle_strokes = render_vector_text_arc(
             text=f"{total_stitches}-STITCH (NEEDLE {clean_pos})",
-            center_x=subtitle_pos[0],
-            center_y=subtitle_pos[1],
-            char_height=0.60
+            radius=left_block.get('subtitle_r', 10.65),
+            start_angle_deg=156.0,
+            end_angle_deg=204.0,
+            char_height=0.58
         )
         if abs(name_rotation) < 1.0:
             maker_strokes = render_vector_text_linear(
@@ -278,7 +278,6 @@ def generate_cam_svg(
                 '',
                 '    <!-- FAR RIGHT FLANK: MAKER\'S MARK BLOCK (Vector Curve Outlines) -->',
                 f'    <path id="right_flank_frame" d="{right_frame_d}" stroke-dasharray="0.8 0.4" />',
-                f'    <path id="right_flank_accent" d="{right_inner_d}" stroke-width="0.06" />',
                 f'    <path id="maker_diamond_top" d="{diamond_d}" fill="#00AA00" />',
                 f'    <path id="maker_diamond_bottom" d="{bottom_diamond_d}" fill="#00AA00" />',
                 f'    <path id="right_flank_maker_curves" d="{maker_curve_d}" stroke-width="0.07" stroke-linecap="round" stroke-linejoin="round" />',
@@ -388,7 +387,6 @@ def generate_cam_svg(
     <!-- RIGHT FLANK: MAKER'S MARK BLOCK (East / 0°, Fine Vector Curves) -->
     <g id="etch-right-maker-block">
       <path d="{right_frame_d}" fill="#064e3b" fill-opacity="0.10" stroke="#10b981" stroke-width="0.08" stroke-dasharray="0.8 0.4" />
-      <path d="{right_inner_d}" fill="none" stroke="#059669" stroke-width="0.07" />
       <path d="{diamond_d}" fill="#34d399" stroke="none" />
       <path d="{bottom_diamond_d}" fill="#34d399" stroke="none" />
       <path id="preview-right-maker-curves" d="{maker_curve_d}" fill="none" stroke="#34d399" stroke-width="0.09" stroke-linecap="round" stroke-linejoin="round" />
@@ -562,19 +560,19 @@ def generate_cam_dxf(
     clean_pos = needle_position.strip().upper() if needle_position in ('L', 'C', 'R') else 'L'
 
     if enable_etch and left_block and right_block:
-        title_pos = left_block.get('title_pos', (-12.4, -4.5))
-        subtitle_pos = left_block.get('subtitle_pos', (-12.4, 4.5))
-        title_strokes = render_vector_text_linear(
+        title_strokes = render_vector_text_arc(
             text=cam_label,
-            center_x=title_pos[0],
-            center_y=title_pos[1],
-            char_height=0.82
+            radius=left_block.get('title_r', 13.85),
+            start_angle_deg=154.0,
+            end_angle_deg=206.0,
+            char_height=0.75
         )
-        subtitle_strokes = render_vector_text_linear(
+        subtitle_strokes = render_vector_text_arc(
             text=f"{total_stitches}-STITCH (NEEDLE {clean_pos})",
-            center_x=subtitle_pos[0],
-            center_y=subtitle_pos[1],
-            char_height=0.60
+            radius=left_block.get('subtitle_r', 10.65),
+            start_angle_deg=156.0,
+            end_angle_deg=204.0,
+            char_height=0.58
         )
         if abs(name_rotation) < 1.0:
             maker_strokes = render_vector_text_linear(
@@ -753,24 +751,6 @@ def generate_cam_dxf(
                 "30", "0.0",
             ])
         dxf_lines.extend(["0", "SEQEND", "8", "ETCH_DESIGN"])
-
-        # Right inner accent
-        if 'inner_accent_polygon' in right_block:
-            dxf_lines.extend([
-                "0", "POLYLINE",
-                "8", "ETCH_DESIGN",
-                "66", "1",
-                "70", "1",
-            ])
-            for x, y in right_block['inner_accent_polygon']:
-                dxf_lines.extend([
-                    "0", "VERTEX",
-                    "8", "ETCH_DESIGN",
-                    "10", f"{x:.4f}",
-                    "20", f"{y:.4f}",
-                    "30", "0.0",
-                ])
-            dxf_lines.extend(["0", "SEQEND", "8", "ETCH_DESIGN"])
 
         # Right diamonds
         dxf_lines.extend([

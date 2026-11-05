@@ -235,6 +235,8 @@ class CamExportTestCase(TestCase):
         self.assertIn('id="etch-right-maker-block"', svg)
         self.assertIn('preview-left-title-curves', svg)
         self.assertIn('preview-right-maker-curves', svg)
+        # Verify right flank has no inner solid border inside the dashed cartouche
+        self.assertNotIn('right_flank_accent', svg)
         # Verify text is exported as vector curves, NOT raw font textPath tags
         self.assertNotIn('<textPath', svg)
 
@@ -260,6 +262,7 @@ class CamExportTestCase(TestCase):
         self.assertIn('id="layer_outer_cam_cut"', svg)
         self.assertIn('left_flank_title_curves', svg)
         self.assertIn('right_flank_maker_curves', svg)
+        self.assertNotIn('right_flank_accent', svg)
         # Zero font tags for 100% laser cutter / LightBurn compatibility
         self.assertNotIn('<textPath', svg)
         self.assertNotIn('<text ', svg)
@@ -307,6 +310,8 @@ class CamViewsTestCase(TestCase):
         self.assertContains(response, 'straight_wall')
         self.assertContains(response, 'capkenway.github.io')
         self.assertContains(response, 'MIT License')
+        self.assertContains(response, 'rel="icon"')
+        self.assertContains(response, 'image/svg+xml')
 
     def test_preview_cam_view_dynamic_stitches_and_gear_mode(self):
         """HTMX preview endpoint handles dynamic stitch counts and gear dwell mode."""
